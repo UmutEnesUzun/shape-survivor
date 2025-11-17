@@ -1,0 +1,4216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shape Survivor v4 (Stats & Rerolls)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #F9FAFB;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            background-color: #1F2937;
+            border-radius: 0.5rem;
+        }
+        
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #374151;
+            border: 2px solid #4B5563;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            z-index: 10;
+            display: none;
+            min-width: 300px;
+            max-width: 600px; /* Increased max width for stats */
+            text-align: center;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        /* Scrollbar styles for modals */
+        .modal::-webkit-scrollbar {
+            width: 8px;
+        }
+        .modal::-webkit-scrollbar-track {
+            background: #4B5563;
+            border-radius: 10px;
+        }
+        .modal::-webkit-scrollbar-thumb {
+            background: #6B7280;
+            border-radius: 10px;
+        }
+        .modal::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+        
+        .modal-button {
+            display: block;
+            width: 100%;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            background-color: #2563EB;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .modal-button:hover {
+            background-color: #3B82F6;
+        }
+        
+        .modal-button:first-child {
+            margin-top: 0;
+        }
+        
+        .modal-button:disabled {
+            background-color: #4B5563;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .powerup-button {
+            text-align: left;
+            background-color: #4B5563;
+        }
+        .powerup-button:hover {
+            background-color: #556475;
+        }
+        .powerup-title {
+            font-weight: 700;
+            font-size: 1.125rem;
+        }
+        .powerup-desc {
+            font-size: 0.875rem;
+            color: #D1D5DB;
+        }
+        
+        /* --- NEW: Artifact Modal Styling --- */
+        #artifactModal .artifact-card-container { /* NEW */
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        #artifactModal .artifact-card-choice { /* NEW */
+            background-color: #4B5563;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 2px solid #6B7280;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            text-align: left;
+        }
+        #artifactModal .artifact-card-choice:hover { /* NEW */
+            background-color: #556475;
+        }
+        #artifactModal .artifact-card-choice .artifact-icon { /* NEW: Tweak for list */
+            font-size: 2rem;
+            float: left;
+            margin-right: 1rem;
+            line-height: 1;
+        }
+        #artifactModal .artifact-card-choice .artifact-title { /* NEW: Tweak for list */
+            font-size: 1.25rem;
+            margin-bottom: 0;
+        }
+        #artifactModal .artifact-card-choice .artifact-rarity { /* NEW: Tweak for list */
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        #artifactModal .artifact-card-choice .artifact-desc { /* NEW: Tweak for list */
+            font-size: 0.9rem;
+            margin-bottom: 0;
+            padding-left: 3rem; /* Align with icon */
+        }
+        
+        #artifactModal .artifact-card {
+            background-color: #4B5563;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 2px solid #6B7280;
+        }
+        #artifactModal .artifact-icon {
+            font-size: 3rem;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+        #artifactModal .artifact-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        #artifactModal .artifact-rarity {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+        
+        /* Rarity Colors */
+        .rarity-legendary { color: #F59E0B; border-color: #F59E0B; } /* Amber */
+        .rarity-epic { color: #A855F7; border-color: #A855F7; } /* Purple */
+        .rarity-mythic { color: #EC4899; border-color: #EC4899; } /* Pink */
+        .rarity-rare { color: #3B82F6; border-color: #3B82F6; } /* Blue */
+        
+        #artifactModal .artifact-desc {
+            font-size: 1rem;
+            color: #D1D5DB;
+            margin-bottom: 1.5rem; /* NEW: Added margin */
+        }
+        
+        #artifactModal .modal-button {
+            display: inline-block; /* NEW */
+            width: auto; /* NEW */
+            padding: 0.75rem 1.5rem; /* NEW */
+            margin: 0 0.5rem; /* NEW */
+        }
+        
+        /* NEW: Decline/Reroll button style */
+        .decline-button {
+            background-color: #EF4444;
+        }
+        .decline-button:hover {
+            background-color: #DC2626;
+        }
+        .reroll-button {
+            background-color: #10B981;
+        }
+        .reroll-button:hover {
+            background-color: #059669;
+        }
+        
+        /* --- End Artifact Modal Styling --- */
+        
+        /* --- NEW: Artifact/Stat List Modals --- */
+        .ui-button {
+            position: absolute;
+            top: 20px;
+            width: 32px;
+            height: 32px;
+            background-color: #374151;
+            border: 2px solid #6B7280;
+            border-radius: 0.375rem;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 5;
+            transition: right 0.2s ease;
+        }
+        #show-artifacts-button {
+            right: 180px; /* Default position, will be updated */
+        }
+        #show-stats-button {
+            right: 220px; /* Default position */
+        }
+        
+        #artifactListModal .artifact-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            text-align: left;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 1rem; /* For scrollbar */
+        }
+        /* Re-using artifact-card-choice styles from above */
+        #artifactListModal .artifact-card-choice .artifact-icon {
+            font-size: 2rem;
+            float: left;
+            margin-right: 1rem;
+            line-height: 1;
+        }
+        #artifactListModal .artifact-card-choice .artifact-title {
+            font-size: 1.25rem;
+            margin-bottom: 0;
+        }
+        #artifactListModal .artifact-card-choice .artifact-rarity {
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        #artifactListModal .artifact-card-choice .artifact-desc {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+            padding-left: 3rem; /* Align with icon */
+        }
+        /* --- End Artifact List Modal --- */
+        
+        /* --- NEW: Stat Info Modal --- */
+        #statInfoModal .stat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            text-align: left;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 1rem;
+        }
+        #statInfoModal h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #FBBF24;
+            border-bottom: 1px solid #6B7280;
+            padding-bottom: 0.5rem;
+        }
+        #statInfoModal .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+        #statInfoModal .stat-item {
+            background: #4B5563;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+        }
+        #statInfoModal .stat-name {
+            font-size: 0.875rem;
+            color: #D1D5DB;
+        }
+        #statInfoModal .stat-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        #statInfoModal .weapon-stat-item {
+            background: #4B5563;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        #statInfoModal .weapon-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        #statInfoModal .weapon-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+        /* --- End Stat Info Modal --- */
+
+        #gameOverScreen h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #EF4444;
+        }
+        
+        #gameOverScreen p {
+            font-size: 1.25rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        #levelUpModal h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        /* NEW: Level up button container */
+        #levelUpModal .modal-button-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        #startScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #startScreen h1 {
+            font-size: 3rem;
+            font-weight: 800;
+        }
+        #startScreen p {
+            font-size: 1.125rem;
+            color: #D1D5DB;
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+            max-width: 400px;
+        }
+
+        #mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            pointer-events: none; 
+        }
+
+        #joystick {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            pointer-events: auto;
+        }
+
+        #joystick-handle {
+            width: 50px;
+            height: 50px;
+            background: rgba(0,150,255,0.7);
+            border-radius: 50%;
+            margin-left: 35px;
+            margin-top: 35px;
+            position: absolute;
+        }
+        
+        /* --- NEW: Artifact UI --- */
+        #artifact-ui {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            z-index: 5;
+        }
+        .artifact-icon-ui {
+            width: 32px;
+            height: 32px;
+            background-color: #374151;
+            border: 2px solid #6B7280;
+            border-radius: 0.375rem; /* rounded-md */
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        /* --- End Artifact UI --- */
+
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- --- NEW: Artifact UI Container --- -->
+    <div id="artifact-ui"></div>
+    <!-- --- End Artifact UI Container --- -->
+
+    <!-- --- NEW: Artifact/Stat List Buttons --- -->
+    <button id="show-artifacts-button" class="ui-button" title="Show Artifacts">📜</button>
+    <button id="show-stats-button" class="ui-button" title="Show Stats">📊</button>
+    <!-- --- End Artifact/Stat List Buttons --- -->
+
+    <div id="startScreen" class="modal" style="display: flex;">
+        <h1>Shape Survivor v4</h1>
+        <p>You are the <strong>Blue Circle</strong>. Move with <strong>WASD</strong> or <strong>Arrow Keys</strong>. Survive the onslaught of enemy shapes. More corners = stronger enemy.</p>
+        <p>Collect XP orbs to level up. Defeat Bosses to gain powerful <strong>Artifacts</strong>. Good luck.</p>
+        <button id="startButton" class="modal-button">Start Game</button>
+    </div>
+
+    <div id="levelUpModal" class="modal">
+        <h2>Level Up!</h2>
+        <p class="mb-4">Choose a power-up:</p>
+        <div id="powerUpOptions"></div>
+        <!-- NEW: Reroll Button -->
+        <div class="modal-button-container">
+            <button id="levelUpRerollButton" class="modal-button reroll-button" style="width: 100%;">Reroll (3)</button>
+        </div>
+    </div>
+    
+    <!-- --- NEW: Artifact Modal --- -->
+    <div id="artifactModal" class="modal">
+        <h2 id="artifact-modal-title" class="text-2xl font-bold mb-4">Choose an Artifact</h2>
+        <div id="artifact-card-content" class="artifact-card-container">
+            <!-- Content will be injected by JS -->
+        </div>
+        <!-- NEW: Updated button container -->
+        <div class="mt-6 flex justify-center gap-4">
+            <button id="artifactRerollButton" class="modal-button reroll-button">Reroll (50 Gold)</button>
+            <button id="artifactDeclineButton" class="modal-button decline-button">Decline</button>
+        </div>
+        <p id="artifact-cost" class="mt-4 text-lg text-yellow-300 font-bold"></p>
+    </div>
+    <!-- --- End Artifact Modal --- -->
+
+    <div id="gameOverScreen" class="modal">
+        <h2>Game Over</h2>
+        <p>You survived for <span id="finalTime">0:00</span></p>
+        <button id="restartButton" class="modal-button">Play Again</button>
+    </div>
+
+    <!-- --- NEW: Artifact List Modal --- -->
+    <div id="artifactListModal" class="modal">
+        <h2 class="text-2xl font-bold mb-4">My Artifacts</h2>
+        <div id="artifact-list-content" class="artifact-list-container">
+            <!-- Artifacts will be injected by JS -->
+        </div>
+        <button id="artifactListCloseButton" class="modal-button decline-button" style="width: auto; padding: 0.75rem 1.5rem; margin-top: 1.5rem;">Close</button>
+    </div>
+    <!-- --- End Artifact List Modal --- -->
+    
+    <!-- --- NEW: Stat Info Modal --- -->
+    <div id="statInfoModal" class="modal">
+        <h2 class="text-2xl font-bold mb-4">Player Stats</h2>
+        <div id="stat-info-content" class="stat-container">
+            <!-- Stats will be injected by JS -->
+        </div>
+        <button id="statInfoCloseButton" class="modal-button decline-button" style="width: auto; padding: 0.75rem 1.5rem; margin-top: 1.5rem;">Close</button>
+    </div>
+    <!-- --- End Stat Info Modal --- -->
+
+    <div id="mobile-controls">
+    <div id="joystick">
+        <div id="joystick-handle"></div>
+    </div>
+    </div>
+
+    <script type="module">
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const startScreen = document.getElementById('startScreen');
+        const levelUpModal = document.getElementById('levelUpModal');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const powerUpOptionsContainer = document.getElementById('powerUpOptions');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const levelUpRerollButton = document.getElementById('levelUpRerollButton'); // NEW
+        
+        // --- NEW: Artifact Modal Elements ---
+        const artifactModal = document.getElementById('artifactModal');
+        const artifactCardContent = document.getElementById('artifact-card-content');
+        // const artifactConfirmButton = document.getElementById('artifactConfirmButton'); // No longer exists
+        const artifactDeclineButton = document.getElementById('artifactDeclineButton'); // NEW
+        const artifactRerollButton = document.getElementById('artifactRerollButton'); // NEW
+        const artifactCostText = document.getElementById('artifact-cost'); // NEW
+        const artifactUiContainer = document.getElementById('artifact-ui');
+        // --- End Artifact Modal Elements ---
+        
+        // --- NEW: Artifact List Modal Elements ---
+        const showArtifactsButton = document.getElementById('show-artifacts-button');
+        const artifactListModal = document.getElementById('artifactListModal');
+        const artifactListContent = document.getElementById('artifact-list-content');
+        const artifactListCloseButton = document.getElementById('artifactListCloseButton');
+        // --- End Artifact List Modal Elements ---
+        
+        // --- NEW: Stat Info Modal Elements ---
+        const showStatsButton = document.getElementById('show-stats-button');
+        const statInfoModal = document.getElementById('statInfoModal');
+        const statInfoContent = document.getElementById('stat-info-content');
+        const statInfoCloseButton = document.getElementById('statInfoCloseButton');
+        // --- End Stat Info Modal Elements ---
+        
+        // --- NEW: Game constants ---
+        const MAX_WEAPONS = 6;
+        const MAX_WEAPON_LEVEL = 8;
+        const MAX_ARTIFACTS = 5; // NEW
+        
+        // --- NEW: Artifact Definitions ---
+        const artifactList = [
+            // Legendary
+            {
+                id: 'kinetic_amplifier',
+                name: 'Kinetic Amplifier',
+                desc: 'All damage scales with movement speed (+5% per speed point).',
+                icon: '⚡',
+                rarity: 'Legendary',
+                apply: (p) => {} // Dynamic
+            },
+            {
+                id: 'temporal_flux',
+                name: 'Temporal Flux',
+                desc: 'All weapon cooldowns reduced by 20%.',
+                icon: '⏰',
+                rarity: 'Legendary',
+                apply: (p) => { p.cooldownMultiplier *= 0.8; } // NERF: 0.7 -> 0.8
+            },
+            {
+                id: 'blood_pact',
+                name: 'Blood Pact',
+                desc: 'Gain 10% Lifesteal and heal 25 HP on kill.',
+                icon: '🩸',
+                rarity: 'Legendary',
+                apply: (p) => { p.lifeSteal += 0.1; p.healOnKill += 25; } // NERF: 20% -> 10%, 50 -> 25
+            },
+            {
+                id: 'glass_cannon',
+                name: 'Glass Cannon',
+                desc: '+40% damage, -25% max HP.',
+                icon: '💎',
+                rarity: 'Legendary',
+                apply: (p) => { // Handled in addArtifact
+                    p.maxHp *= 0.75; // NERF: 0.7 -> 0.75
+                    p.hp = Math.min(p.hp, p.maxHp);
+                }
+            },
+            {
+                id: 'fatal_precision',
+                name: 'Fatal Precision',
+                desc: '+20% critical hit chance. Critical hits deal 3x damage.',
+                icon: '💥',
+                rarity: 'Legendary',
+                apply: (p) => { p.critChance += 0.20; p.critMultiplier = Math.max(p.critMultiplier, 3.0); }
+            },
+            {
+                id: 'shockwave_core',
+                name: 'Shockwave Core',
+                desc: '+75% AOE size. Non-AOE projectiles create a small splash explosion.',
+                icon: '💫',
+                rarity: 'Legendary',
+                apply: (p) => { p.aoeMultiplier *= 1.75; }
+            },
+            {
+                id: 'plague_doctor',
+                name: 'Plague Doctor',
+                desc: 'All damage applies poison (5 DPS for 3s). Stacks.',
+                icon: '☠️',
+                rarity: 'Legendary',
+                apply: (p) => {} // Dynamic
+            },
+            {
+                id: 'titan_slayer',
+                name: 'Titan Slayer',
+                desc: 'Deal 3x damage to Bosses and Elites. Fully heal on boss kill.',
+                icon: '⚔️',
+                rarity: 'Legendary',
+                apply: (p) => {} // Dynamic
+            },
+            // Epic
+            {
+                id: 'berserkers_rage',
+                name: "Berserker's Rage",
+                desc: 'Deal 100% bonus damage to enemies within 150 units.',
+                icon: '🔥',
+                rarity: 'Epic',
+                apply: (p) => {} // Dynamic
+            },
+            {
+                id: 'sharpshooters_focus',
+                name: "Sharpshooter's Focus",
+                desc: 'Deal 75% bonus damage to enemies beyond 300 units.',
+                icon: '🎯',
+                rarity: 'Epic',
+                apply: (p) => {} // Dynamic
+            },
+            {
+                id: 'ironclad',
+                name: 'Ironclad',
+                desc: '+100 max HP, +2 HP/sec regen, -10% damage.',
+                icon: '🛡️',
+                rarity: 'Epic',
+                apply: (p) => { // Handled in addArtifact
+                    p.maxHp += 100;
+                    p.hp += 100;
+                    p.hpRegen += 2;
+                }
+            },
+            {
+                id: 'sonic_dash',
+                name: 'Sonic Dash',
+                desc: '+50% movement speed.',
+                icon: '💨',
+                rarity: 'Epic',
+                apply: (p) => { p.speed *= 1.5; }
+            },
+            {
+                id: 'thorned_carapace',
+                name: 'Thorned Carapace',
+                desc: '+200 Thorns damage. Reflect 25% of incoming damage.',
+                icon: '🌵',
+                rarity: 'Epic',
+                apply: (p) => { p.thornsDamage += 200; }
+            },
+            {
+                id: 'overclock_module',
+                name: 'Overclock Module',
+                desc: 'All weapons fire 50% faster, -20% damage.',
+                icon: '⚙️',
+                rarity: 'Epic',
+                apply: (p) => { p.cooldownMultiplier *= 0.7; } // NERF: 0.5 -> 0.7
+            },
+            // Mythic
+            {
+                id: 'prism_splitter',
+                name: 'Prism Splitter',
+                desc: 'All projectile weapons fire +1 additional projectile.',
+                icon: '🌟',
+                rarity: 'Mythic',
+                apply: (p) => { p.bonusProjectiles += 1; } // NERF: +2 -> +1
+            },
+            {
+                id: 'four_leaf_clover',
+                name: 'Four Leaf Clover',
+                desc: '+15% dodge, +15% crit. Better power-ups (Not really).',
+                icon: '🍀',
+                rarity: 'Mythic',
+                apply: (p) => { p.dodgeChance = Math.min(0.25, p.dodgeChance + 0.15); p.critChance += 0.15; }
+            },
+            {
+                id: 'phoenix_heart',
+                name: 'Phoenix Heart',
+                desc: 'Revive with full HP and 5s invincibility once.',
+                icon: '🔱',
+                rarity: 'Mythic',
+                apply: (p) => {} // Dynamic
+            },
+            {
+                id: 'soul_collector',
+                name: 'Soul Collector',
+                desc: '+1 max HP per kill (up to +200).',
+                icon: '👻',
+                rarity: 'Mythic',
+                apply: (p) => {} // Dynamic
+            },
+            { // NEW
+                id: 'last_stand_sigil',
+                name: 'Last Stand Sigil',
+                desc: 'Once per run, survive lethal damage with 1 HP and 3s invincibility.',
+                icon: '🛡️',
+                rarity: 'Mythic',
+                apply: (p) => { p.hasLastStand = true; }
+            },
+            // Rare
+            {
+                id: 'gravity_well_core',
+                name: 'Gravity Well Core',
+                desc: '3x XP pickup range, +25% XP gain.',
+                icon: '🧲',
+                rarity: 'Rare',
+                apply: (p) => { p.magnetRange *= 3.0; }
+            },
+            { // NEW
+                id: 'reroll_token',
+                name: 'Reroll Token',
+                desc: 'Gain +2 level-up rerolls.',
+                icon: '🔄',
+                rarity: 'Rare',
+                apply: (p) => { p.rerolls += 2; }
+            },
+            { // NEW
+                id: 'gold_doubloon',
+                name: 'Gold Doubloon',
+                desc: 'Gain 200 Gold immediately. Gold drops are worth 50% more.',
+                icon: '💰',
+                rarity: 'Rare',
+                apply: (p) => { p.gold += 200; p.goldMultiplier += 0.5; }
+            },
+        ];
+        // --- End Artifact Definitions ---
+
+        let game = {
+            paused: true,
+            gameOver: false,
+            startTime: 0,
+            timer: 0,
+            animationFrameId: null,
+            spawnInterval: 2000,
+            minSpawnInterval: 250,
+            spawnTimer: 0,
+            wave: 1,
+            lastFrameTime: 0,
+            pausedTime : 0,
+            pauseStart : null,
+        };
+
+        let player = {
+            x: 0,
+            y: 0,
+            radius: 15,
+            color: '#3B82F6',
+            speed: 3,
+            hp: 200,
+            maxHp: 200,
+            level: 1,
+            xp: 0,
+            xpToNextLevel: 15,
+            magnetRange: 100,
+            projectileSpeed: 5,
+            orbitAngle: 0,
+            invincible: false,
+            invincibleTimer: 0,
+            invincibilityDuration: 1000,
+            
+            critChance: 0,
+            critMultiplier: 2.0,
+            lifeSteal: 0,
+            thornsDamage: 0,
+            aoeMultiplier: 1.0,
+            durationMultiplier: 1.0, // NEW
+            
+            dodgeChance: 0,
+            hpRegen: 0,
+            hasLastStand: false,
+            lastSpikeTime: 0,
+            armor: 0, // NEW
+            
+            // --- NEW: Artifact Stats ---
+            artifacts: [],
+            hasArtifact: {},
+            maxArtifacts: MAX_ARTIFACTS,
+            cooldownMultiplier: 1.0,
+            bonusProjectiles: 0,
+            healOnKill: 0,
+            phoenixHeartUsed: false,
+            soulCollectorKills: 0,
+            gold: 0, // NEW
+            goldMultiplier: 1.0, // NEW
+            rerolls: 3, // NEW
+            // --- End Artifact Stats ---
+            
+            weapons: {
+                main: { 
+                    level: 1, 
+                    damage: 12, // BUFF: 10 -> 12
+                    fireRate: 1000, 
+                    lastFireTime: 0, 
+                    projectileCount: 1 
+                },
+                pierce: { 
+                    level: 0, 
+                    damage: 15, 
+                    fireRate: 2000, 
+                    lastFireTime: 0, 
+                    pierceCount: 2,
+                    projectileCount: 1 // NEW for Prism Splitter
+                },
+                aoe: { 
+                    level: 0, 
+                    damage: 20, 
+                    radius: 40, 
+                    fireRate: 3000, 
+                    lastFireTime: 0,
+                    projectileCount: 1 // NEW for Prism Splitter
+                },
+                boomerang: { 
+                    level: 0, 
+                    damage: 12, 
+                    fireRate: 1500, 
+                    lastFireTime: 0,
+                    projectileCount: 1 // NEW for Prism Splitter
+                },
+                laser: { 
+                    level: 0, 
+                    damage: 1, // NERF: 2 -> 1
+                    cooldown: 3000, 
+                    lastActivation: 0, 
+                    duration: 1000, 
+                    tickRate: 50, 
+                    lastTick: 0, 
+                    active: false, 
+                    target: null,
+                    range: 350, // NEW: Laser Range
+		    startTime: 0
+                },
+                blade: { 
+                    level: 0, 
+                    damage: 15, 
+                    speed: 0.05, 
+                    count: 0 
+                },
+                missile: { 
+                    level: 0, 
+                    damage: 25, // NERF: 30 -> 25
+                    radius: 50, 
+                    fireRate: 2500, 
+                    lastFireTime: 0,
+                    projectileCount: 1 // NEW for Prism Splitter
+                },
+                lightning: { 
+                    level: 0, 
+                    damage: 25, 
+                    fireRate: 3000, 
+                    lastFireTime: 0, 
+                    chainCount: 3 
+                },
+                poison: { 
+                    level: 0, 
+                    damage: 5, 
+                    fireRate: 4000, 
+                    lastFireTime: 0,
+                    duration: 5000 // NEW
+                },
+                shield: { 
+                    level: 0, 
+                    count: 0,
+                    damage: 20
+                },
+                ricochet: {
+                    level: 0,
+                    damage: 15,
+                    fireRate: 1500,
+                    lastFireTime: 0,
+                    projectileCount: 1,
+                    bounces: 3
+                },
+                gravity: {
+                    level: 0,
+                    damage: 30,
+                    fireRate: 5000,
+                    lastFireTime: 0,
+                    radius: 150,
+                    pullStrength: 3,
+                    projectileCount: 1 // NEW for Prism Splitter
+                },
+                nova: {
+                    level: 0,
+                    damage: 10,
+                    fireRate: 4000,
+                    lastFireTime: 0,
+                    radius: 100,
+                    slowAmount: 0.3,
+                    slowDuration: 2000
+                },
+                spike: {
+                    level: 0,
+                    damage: 8,
+                    fireRate: 500,
+                    duration: 3000
+                },
+                turret: {
+                    level: 0,
+                    damage: 5,
+                    fireRate: 200,
+                    deployCooldown: 20000,
+                    lastDeployTime: 0,
+                    duration: 10000,
+                    count: 0
+                },
+                scythe: {
+                    level: 0,
+                    damage: 35, // NERF: 40 -> 35
+                    fireRate: 3000,
+                    lastFireTime: 0,
+                    arcSize: Math.PI / 2,
+                    count: 1
+                }
+            }
+        };
+
+        let keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            ArrowUp: false,
+            ArrowLeft: false,
+            ArrowDown: false,
+            ArrowRight: false
+        };
+        
+        let joystickActive = false;
+        let joystickStart = { x: 0, y: 0 };
+        let joystickPos = { x: 0, y: 0 };
+
+
+        let enemies = [];
+        let projectiles = [];
+        let xpOrbs = [];
+        let blades = [];
+        let poisonClouds = [];
+        let lightningBolts = [];
+        
+        let spikes = [];
+        let turrets = [];
+        let scythes = [];
+        let novas = [];
+        let gravityWells = [];
+
+        function getActiveWeaponCount() {
+            return Object.keys(player.weapons).filter(key => 
+                key !== 'main' && 
+                player.weapons[key].level > 0
+            ).length;
+        }
+        
+        function areAllWeaponsMaxed() {
+            const activeWeaponKeys = Object.keys(player.weapons).filter(key => 
+                key !== 'main' && 
+                player.weapons[key].level > 0
+            );
+            
+            if (activeWeaponKeys.length < MAX_WEAPONS) {
+                return false;
+            }
+            
+            for (const key of activeWeaponKeys) {
+                if (player.weapons[key].level < MAX_WEAPON_LEVEL) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function getDistance(x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // --- NEW: Draw Star ---
+        function drawStar(x, y, radius, color) {
+            const points = 5;
+            const innerRadius = radius / 2;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            
+            for (let i = 0; i < 2 * points; i++) {
+                const r = (i % 2 === 0) ? radius : innerRadius;
+                const angle = (i * Math.PI / points) - (Math.PI / 2); // Start at top
+                ctx.lineTo(x + r * Math.cos(angle), y + r * Math.sin(angle));
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // --- NEW: Draw Rhombus ---
+        function drawRhombus(x, y, radius, color) {
+            const r = radius; // radius is half-width
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x, y - r * 1.5); // Top
+            ctx.lineTo(x + r, y); // Right
+            ctx.lineTo(x, y + r * 1.5); // Bottom
+            ctx.lineTo(x - r, y); // Left
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawPolygon(x, y, radius, sides, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x + radius * Math.cos(0), y + radius * Math.sin(0));
+            for (let i = 1; i <= sides; i++) {
+                ctx.lineTo(
+                    x + radius * Math.cos((i * 2 * Math.PI) / sides),
+                    y + radius * Math.sin((i * 2 * Math.PI) / sides)
+                );
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // --- NEW: Rarity color helper ---
+        function getRarityClass(rarity) {
+            switch(rarity) {
+                case 'Legendary': return 'rarity-legendary';
+                case 'Epic': return 'rarity-epic';
+                case 'Mythic': return 'rarity-mythic';
+                case 'Rare': return 'rarity-rare';
+                default: return 'text-gray-400';
+            }
+        }
+        function getRarityBorder(rarity) {
+            switch(rarity) {
+                case 'Legendary': return 'border-yellow-500';
+                case 'Epic': return 'border-purple-500';
+                case 'Mythic': return 'border-pink-500';
+                case 'Rare': return 'border-blue-500';
+                default: return 'border-gray-500';
+            }
+        }
+        // --- End Rarity ---
+
+        function initGame() {
+            resizeCanvas();
+            
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            
+            window.addEventListener('keydown', (e) => {
+                if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+            });
+            window.addEventListener('keyup', (e) => {
+                if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+            });
+            
+            window.addEventListener('resize', resizeCanvas);
+            
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', resetGame);
+            
+            // --- NEW: Artifact Modal Button ---
+            artifactDeclineButton.addEventListener('click', () => { // NEW
+                 artifactModal.style.display = 'none';
+                 unPauseGame();
+            });
+            artifactRerollButton.addEventListener('click', rerollArtifacts); // NEW
+            
+            // --- NEW: Level Up Reroll Button ---
+            levelUpRerollButton.addEventListener('click', rerollLevelUp);
+            
+            // --- NEW: Artifact List Modal Listeners ---
+            showArtifactsButton.addEventListener('click', () => {
+                pauseGame();
+                artifactListContent.innerHTML = '';
+                if (player.artifacts.length === 0) {
+                    artifactListContent.innerHTML = '<p class="text-center">No artifacts collected yet!</p>';
+                }
+                player.artifacts.forEach(artifact => {
+                    const rarityClass = getRarityClass(artifact.rarity);
+                    const borderClass = getRarityBorder(artifact.rarity);
+                    
+                    const card = document.createElement('div');
+                    card.className = `artifact-card-choice ${borderClass}`;
+                    card.innerHTML = `
+                        <div class="artifact-icon">${artifact.icon}</div>
+                        <div class="artifact-title ${rarityClass}">${artifact.name}</div>
+                        <div class="artifact-rarity ${rarityClass}">${artifact.rarity}</div>
+                        <p class="artifact-desc">${artifact.desc}</p>
+                    `;
+                    artifactListContent.appendChild(card);
+                });
+                artifactListModal.style.display = 'block';
+            });
+            
+            artifactListCloseButton.addEventListener('click', () => {
+                artifactListModal.style.display = 'none';
+                unPauseGame();
+            });
+            // --- End Artifact List Modal Listeners ---
+            
+            // --- NEW: Stat Info Modal Listeners ---
+            showStatsButton.addEventListener('click', showStatInfoModal);
+            statInfoCloseButton.addEventListener('click', () => {
+                statInfoModal.style.display = 'none';
+                unPauseGame();
+            });
+            // --- End Stat Info Modal Listeners ---
+
+            const joystick = document.getElementById('joystick');
+            const handle = document.getElementById('joystick-handle');
+
+            joystick.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                joystickActive = true;
+                const t = e.touches[0];
+                joystickStart.x = t.clientX;
+                joystickStart.y = t.clientY;
+            }, { passive: false });
+
+            joystick.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!joystickActive) return;
+
+                const t = e.touches[0];
+                const dx = t.clientX - joystickStart.x;
+                const dy = t.clientY - joystickStart.y;
+
+                const maxDist = 40;
+                const dist = Math.min(maxDist, Math.sqrt(dx*dx + dy*dy));
+                const angle = Math.atan2(dy, dx);
+
+                const offsetX = Math.cos(angle) * dist;
+                const offsetY = Math.sin(angle) * dist;
+
+                handle.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+
+                keys.w = dy < -10;
+                keys.s = dy > 10;
+                keys.a = dx < -10;
+                keys.d = dx > 10;
+            }, { passive: false });
+
+            joystick.addEventListener('touchend', () => {
+                joystickActive = false;
+                handle.style.transform = `translate(0px,0px)`;
+                keys.w = keys.a = keys.s = keys.d = false;
+            });
+        }
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            resetGame();
+        }
+        
+        // --- NEW: Artifact Helper Functions ---
+        function pickRandomArtifact() {
+            const availableArtifacts = artifactList.filter(a => !player.hasArtifact[a.id]);
+            if (availableArtifacts.length === 0) {
+                return null;
+            }
+            const randIndex = Math.floor(Math.random() * availableArtifacts.length);
+            return availableArtifacts[randIndex];
+        }
+        
+        function addArtifact(artifact) {
+            if (!artifact || player.artifacts.length >= player.maxArtifacts) return;
+            
+            player.artifacts.push(artifact);
+            player.hasArtifact[artifact.id] = true;
+            
+            if (artifact.apply) {
+                artifact.apply(player);
+            }
+            
+            updateArtifactUI();
+        }
+        
+        function updateArtifactUI() {
+            artifactUiContainer.innerHTML = '';
+            player.artifacts.forEach(artifact => {
+                const iconEl = document.createElement('div');
+                iconEl.className = `artifact-icon-ui ${getRarityBorder(artifact.rarity)}`;
+                iconEl.textContent = artifact.icon;
+                iconEl.title = `${artifact.name} (${artifact.rarity})\n${artifact.desc}`;
+                artifactUiContainer.appendChild(iconEl);
+            });
+            // NEW: Update "Show Artifacts" button position
+            const artifactCount = player.artifacts.length;
+            const artifactUiWidth = (artifactCount * 40); // 32px + 8px gap
+            showArtifactsButton.style.right = `calc(20px + ${artifactUiWidth}px)`;
+            showStatsButton.style.right = `calc(20px + ${artifactUiWidth}px + 40px)`;
+        }
+        // --- End Artifact Helper Functions ---
+
+        function resetGame() {
+            game.paused = false;
+            game.gameOver = false;
+            game.pausedTime = 0;
+            game.pauseStart = null;
+            game.startTime = Date.now();
+            game.timer = 0;
+            game.spawnInterval = 2000;
+            game.spawnTimer = 0;
+            game.wave = 1;
+            game.lastFrameTime = Date.now();
+
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.hp = 200;
+            player.maxHp = 200;
+            player.level = 1;
+            player.xp = 0;
+            player.xpToNextLevel = 15;
+            player.speed = 3;
+            player.magnetRange = 100;
+            player.projectileSpeed = 5;
+            player.invincible = false;
+            player.invincibleTimer = 0;
+            player.critChance = 0;
+            player.lifeSteal = 0;
+            player.thornsDamage = 0;
+            player.aoeMultiplier = 1.0;
+            player.durationMultiplier = 1.0; // NEW
+
+            player.dodgeChance = 0;
+            player.hpRegen = 0;
+            player.hasLastStand = false;
+            player.lastSpikeTime = 0;
+            player.armor = 0; // NEW
+            
+            // --- NEW: Reset Artifact Stats ---
+            player.artifacts = [];
+            player.hasArtifact = {};
+            player.cooldownMultiplier = 1.0;
+            player.healOnKill = 0;
+            player.phoenixHeartUsed = false;
+            player.soulCollectorKills = 0;
+            player.gold = 0; // NEW
+            player.goldMultiplier = 1.0; // NEW
+            player.rerolls = 3; // NEW
+            // --- End Reset Artifact Stats ---
+
+            player.weapons = {
+                main: { 
+                    level: 1, 
+                    damage: 12, // BUFF: 10 -> 12
+                    fireRate: 1000, 
+                    lastFireTime: 0, 
+                    projectileCount: 1 
+                },
+                pierce: { 
+                    level: 0, 
+                    damage: 15, 
+                    fireRate: 2000, 
+                    lastFireTime: 0, 
+                    pierceCount: 2,
+                    projectileCount: 1
+                },
+                aoe: { 
+                    level: 0, 
+                    damage: 20, 
+                    radius: 40, 
+                    fireRate: 3000, 
+                    lastFireTime: 0,
+                    projectileCount: 1
+                },
+                boomerang: { 
+                    level: 0, 
+                    damage: 12, 
+                    fireRate: 1500, 
+                    lastFireTime: 0,
+                    projectileCount: 1
+                },
+                laser: { 
+                    level: 0, 
+                    damage: 1, // NERF: 2 -> 1
+                    cooldown: 3000, 
+                    lastActivation: 0, 
+                    duration: 1000, 
+                    tickRate: 50, 
+                    lastTick: 0, 
+                    active: false, 
+                    target: null,
+                    range: 350, // NEW: Laser Range
+		    startTime: 0
+                },
+                blade: { 
+                    level: 0, 
+                    damage: 15, 
+                    speed: 0.05, 
+                    count: 0 
+                },
+                missile: { 
+                    level: 0, 
+                    damage: 25, // NERF: 30 -> 25
+                    radius: 50, 
+                    fireRate: 2500, 
+                    lastFireTime: 0,
+                    projectileCount: 1
+                },
+                lightning: { 
+                    level: 0, 
+                    damage: 25, 
+                    fireRate: 3000, 
+                    lastFireTime: 0, 
+                    chainCount: 3 
+                },
+                poison: { 
+                    level: 0, 
+                    damage: 5, 
+                    fireRate: 4000, 
+                    lastFireTime: 0,
+                    duration: 5000 // NEW
+                },
+                shield: { 
+                    level: 0, 
+                    count: 0,
+                    damage: 20
+                },
+                ricochet: {
+                    level: 0,
+                    damage: 15,
+                    fireRate: 1500,
+                    lastFireTime: 0,
+                    projectileCount: 1,
+                    bounces: 3
+                },
+                gravity: {
+                    level: 0,
+                    damage: 30,
+                    fireRate: 5000,
+                    lastFireTime: 0,
+                    radius: 150,
+                    pullStrength: 3,
+                    projectileCount: 1
+                },
+                nova: {
+                    level: 0,
+                    damage: 10,
+                    fireRate: 4000,
+                    lastFireTime: 0,
+                    radius: 100,
+                    slowAmount: 0.3,
+                    slowDuration: 2000
+                },
+                spike: {
+                    level: 0,
+                    damage: 8,
+                    fireRate: 500,
+                    duration: 3000
+                },
+                turret: {
+                    level: 0,
+                    damage: 5,
+                    fireRate: 200,
+                    deployCooldown: 20000,
+                    lastDeployTime: 0,
+                    duration: 10000,
+                    count: 0
+                },
+                scythe: {
+                    level: 0,
+                    damage: 35, // NERF: 40 -> 35
+                    fireRate: 3000,
+                    lastFireTime: 0,
+                    arcSize: Math.PI / 2,
+                    count: 1
+                }
+            };
+
+            enemies = [];
+            projectiles = [];
+            xpOrbs = [];
+            blades = [];
+            poisonClouds = [];
+            lightningBolts = [];
+            
+            spikes = [];
+            turrets = [];
+            scythes = [];
+            novas = [];
+            gravityWells = [];
+
+
+            gameOverScreen.style.display = 'none';
+            levelUpModal.style.display = 'none';
+            artifactModal.style.display = 'none'; // NEW
+
+            // --- NEW: Grant starting artifact ---
+            const startArtifact = pickRandomArtifact();
+            addArtifact(startArtifact); // This also calls updateArtifactUI()
+            // --- End NEW ---
+
+            if (game.animationFrameId) {
+                cancelAnimationFrame(game.animationFrameId);
+            }
+            game.animationFrameId = requestAnimationFrame(gameLoop); // Start the loop
+        }
+
+        function gameLoop() {
+            // --- NEW: Reworked Game Loop ---
+            if (game.gameOver) {
+                showGameOver();
+                cancelAnimationFrame(game.animationFrameId);
+                return;
+            }
+            
+            const now = Date.now();
+            
+            if (game.paused) {
+                draw(now); // Keep drawing when paused for modals
+                game.animationFrameId = requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            const deltaTime = now - game.lastFrameTime;
+            game.lastFrameTime = now;
+
+            update(now, deltaTime);
+            draw(now); // FIX: Pass 'now' to draw
+
+            game.animationFrameId = requestAnimationFrame(gameLoop);
+            // --- End Reworked Game Loop ---
+        }
+
+        function pauseGame(){
+            game.paused = true;
+            game.pauseStart = Date.now();
+            // No cancel animation frame needed, gameLoop handles it
+        }
+
+        function unPauseGame(){
+            if (!game.gameOver) { // Don't unpause if game over
+                game.paused = false;
+                game.pausedTime += Date.now() - game.pauseStart;
+                game.pauseStart = null;
+                game.lastFrameTime = Date.now();
+            }
+            // No new gameloop start needed
+        }
+
+        function update(now, deltaTime) {
+            game.timer = now - game.startTime - game.pausedTime;
+            
+            updatePlayer(deltaTime);
+            updateWeapons(now, deltaTime);
+            updateProjectiles(deltaTime);
+            spawnEnemies(now, deltaTime); // NEW: Pass 'now'
+            updateEnemies(now, deltaTime); // NEW: Pass 'now'
+            updateXPOrbs(deltaTime);
+            checkCollisions(now);
+            
+            updateSpikes(now, deltaTime);
+            updateTurrets(now, deltaTime);
+            updateScythes(now, deltaTime);
+            updateNovas(now, deltaTime);
+            updateGravityWells(now, deltaTime);
+            
+            if (Math.floor(game.timer / 30000) + 1 > game.wave) {
+                game.wave = Math.floor(game.timer / 30000) + 1;
+                game.spawnInterval = Math.max(game.minSpawnInterval, game.spawnInterval * 0.90); // BUFF: 0.95 -> 0.90
+            }
+        }
+
+        function updatePlayer(deltaTime) {
+            let dx = 0;
+            let dy = 0;
+
+            if (keys.w || keys.ArrowUp) dy -= 1;
+            if (keys.s || keys.ArrowDown) dy += 1;
+            if (keys.a || keys.ArrowLeft) dx -= 1;
+            if (keys.d || keys.ArrowRight) dx += 1;
+
+            if (dx !== 0 && dy !== 0) {
+                const magnitude = Math.sqrt(dx * dx + dy * dy);
+                dx /= magnitude;
+                dy /= magnitude;
+            }
+
+            player.x += dx * player.speed;
+            player.y += dy * player.speed;
+
+            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+            
+            player.orbitAngle += 0.03;
+            
+            if (player.hpRegen > 0 && player.hp < player.maxHp) {
+                player.hp = Math.min(player.maxHp, player.hp + player.hpRegen * (deltaTime / 1000));
+            }
+            
+            if (player.invincible) {
+                player.invincibleTimer -= deltaTime;
+                if (player.invincibleTimer <= 0) {
+                    player.invincible = false;
+                    player.invincibleTimer = 0;
+                }
+            }
+        }
+        
+        // --- NEW: Centralized Damage Calculation ---
+        function calculateDamage(baseDamage, enemy) {
+            let finalDamage = baseDamage;
+            
+            // --- Artifact Damage Bonuses ---
+            let damageMultiplier = 1.0;
+            
+            if (player.hasArtifact['kinetic_amplifier']) {
+                damageMultiplier += (player.speed * 0.05);
+            }
+            if (player.hasArtifact['glass_cannon']) {
+                damageMultiplier += 0.4; // NERF: 0.5 -> 0.4
+            }
+            if (player.hasArtifact['titan_slayer'] && (enemy.type === 'boss' || enemy.type === 'hexagon' || enemy.type === 'tank')) { // Elites
+                damageMultiplier += 2.0; // 3x total damage
+            }
+            if (player.hasArtifact['berserkers_rage']) {
+                if (getDistance(player.x, player.y, enemy.x, enemy.y) < 150) {
+                    damageMultiplier += 1.0;
+                }
+            }
+            if (player.hasArtifact['sharpshooters_focus']) {
+                 if (getDistance(player.x, player.y, enemy.x, enemy.y) > 300) {
+                    damageMultiplier += 0.75;
+                }
+            }
+            if (player.hasArtifact['ironclad']) {
+                damageMultiplier -= 0.1;
+            }
+            if (player.hasArtifact['overclock_module']) {
+                damageMultiplier -= 0.1; // NERF: 0.2 -> 0.1
+            }
+            
+            finalDamage *= damageMultiplier;
+            // --- End Artifacts ---
+            
+            // --- Crit Chance ---
+            if (Math.random() < player.critChance) {
+                finalDamage *= player.critMultiplier;
+            }
+            
+            return finalDamage;
+        }
+        
+        function applyPoison(enemy) {
+            if (player.hasArtifact['plague_doctor']) {
+                enemy.poisonTimer = 3000;
+                enemy.poisonDps += 5; // Stacks
+            }
+        }
+        // --- End Centralized Damage Calculation ---
+
+        function updateWeapons(now, deltaTime) {
+            let nearestEnemy = null;
+            let minDis = Infinity;
+            
+            for(const enemy of enemies) {
+                const dis = getDistance(player.x, player.y, enemy.x, enemy.y);
+                if (dis < minDis) {
+                    minDis = dis;
+                    nearestEnemy = enemy;
+                }
+            }
+            
+            const weapons = player.weapons;
+            const cd = player.cooldownMultiplier; // NEW: Cooldown Multiplier
+            const dur = player.durationMultiplier; // NEW: Duration Multiplier
+            
+            let dx = 0;
+            let dy = 0;
+            if (keys.w || keys.ArrowUp) dy -= 1;
+            if (keys.s || keys.ArrowDown) dy += 1;
+            if (keys.a || keys.ArrowLeft) dx -= 1;
+            if (keys.d || keys.ArrowRight) dx += 1;
+            const hasMoved = dx !== 0 || dy !== 0;
+            
+            // Main Shot
+            if (now - weapons.main.lastFireTime > (weapons.main.fireRate * cd)) {
+                weapons.main.lastFireTime = now;
+
+                if (nearestEnemy) {
+                    const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                    const totalProjectiles = weapons.main.projectileCount + player.bonusProjectiles; // NEW
+                    
+                    const angleSpread = Math.PI / 18;
+                    for (let i = 0; i < totalProjectiles; i++) {
+                        const currentAngle = angle - (angleSpread * (totalProjectiles - 1)) / 2 + (i * angleSpread);
+                        projectiles.push({
+                            x: player.x,
+                            y: player.y,
+                            radius: 5,
+                            color: '#FBBF24',
+                            vx: Math.cos(currentAngle) * player.projectileSpeed,
+                            vy: Math.sin(currentAngle) * player.projectileSpeed,
+                            damage: weapons.main.damage,
+                            piercing: false,
+                            aoe: false,
+                        });
+                    }
+                }
+            }
+            
+            // Pierce Shot
+            if (weapons.pierce.level > 0 && now - weapons.pierce.lastFireTime > (weapons.pierce.fireRate * cd)) {
+                weapons.pierce.lastFireTime = now;
+                
+                if (nearestEnemy) {
+                    const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                    const totalProjectiles = weapons.pierce.projectileCount + player.bonusProjectiles; // NEW
+                    
+                    for (let i = 0; i < totalProjectiles; i++) {
+                        const spread = (Math.random() - 0.5) * 0.1 * i;
+                        projectiles.push({
+                            x: player.x,
+                            y: player.y,
+                            radius: 7,
+                            color: '#60A5FA',
+                            vx: Math.cos(angle + spread) * (player.projectileSpeed * 1.5),
+                            vy: Math.sin(angle + spread) * (player.projectileSpeed * 1.5),
+                            damage: weapons.pierce.damage,
+                            piercing: true,
+                            aoe: false,
+                            pierceLeft: weapons.pierce.pierceCount,
+                            hitEnemies: []
+                        });
+                    }
+                }
+            }
+
+            // AOE Shot
+            if (weapons.aoe.level > 0 && now - weapons.aoe.lastFireTime > (weapons.aoe.fireRate * cd)) {
+                weapons.aoe.lastFireTime = now;
+                
+                if (nearestEnemy) {
+                    const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                    const totalProjectiles = weapons.aoe.projectileCount + player.bonusProjectiles; // NEW
+                    
+                    for (let i = 0; i < totalProjectiles; i++) {
+                        const spread = (Math.random() - 0.5) * 0.1 * i;
+                        projectiles.push({
+                            x: player.x,
+                            y: player.y,
+                            radius: 8,
+                            color: '#EC4899',
+                            vx: Math.cos(angle + spread) * player.projectileSpeed,
+                            vy: Math.sin(angle + spread) * player.projectileSpeed,
+                            damage: weapons.aoe.damage,
+                            piercing: false,
+                            aoe: true,
+                            aoeRadius: weapons.aoe.radius * player.aoeMultiplier,
+                        });
+                    }
+                }
+            }
+            
+            // Boomerang
+            if (weapons.boomerang.level > 0 && now - weapons.boomerang.lastFireTime > (weapons.boomerang.fireRate * cd)) {
+                weapons.boomerang.lastFireTime = now;
+                
+                if (nearestEnemy) {
+                    const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                    const totalProjectiles = weapons.boomerang.projectileCount + player.bonusProjectiles; // NEW
+                    
+                    for (let i = 0; i < totalProjectiles; i++) {
+                        const spread = (Math.random() - 0.5) * 0.1 * i;
+                        projectiles.push({
+                            x: player.x,
+                            y: player.y,
+                            radius: 6,
+                            color: '#34D399',
+                            vx: Math.cos(angle + spread) * player.projectileSpeed * 1.2,
+                            vy: Math.sin(angle + spread) * player.projectileSpeed * 1.2,
+                            damage: weapons.boomerang.damage,
+                            piercing: false,
+                            aoe: false,
+                            boomerang: true,
+                            distanceTraveled: 0,
+                            maxDistance: 200,
+                            returning: false,
+                            startX: player.x,
+                            startY: player.y
+                        });
+                    }
+                }
+            }
+            
+            // Laser
+            const laser = weapons.laser;
+            // 1. Try to activate laser (only when not active)
+if (laser.level > 0 && !laser.active) {
+    if (now - laser.lastActivation > (laser.cooldown * cd)) {
+
+        // find closest enemy within RANGE
+        let closest = null;
+        let closestDist = laser.range;
+
+        for (const e of enemies) {
+            const d = getDistance(player.x, player.y, e.x, e.y);
+            if (d < closestDist) {
+                closest = e;
+                closestDist = d;
+            }
+        }
+
+        if (closest) {
+            laser.active = true;
+            laser.startTime = now;
+            laser.target = closest;
+        }
+
+        laser.lastActivation = now;
+    }
+}
+
+// 2. Handle active laser lifetime
+if (laser.active) {
+    // stop laser after duration (duration * duration multiplier)
+    if (now - laser.startTime > (laser.duration * player.durationMultiplier)) {
+        laser.active = false;
+        laser.target = null;
+    } else {
+        // 3. Damage tick
+        if (now - laser.lastTick > laser.tickRate) {
+            laser.lastTick = now;
+
+            // compute angle to aim along
+            let angle;
+
+            if (laser.target && enemies.includes(laser.target)) {
+                angle = Math.atan2(
+                    laser.target.y - player.y,
+                    laser.target.x - player.x
+                );
+            } else {
+                // target somehow missing -> find closest again
+                let closest = null;
+                let closestDist = laser.range;
+
+                for (const e of enemies) {
+                    const d = getDistance(player.x, player.y, e.x, e.y);
+                    if (d < closestDist) {
+                        closest = e;
+                        closestDist = d;
+                    }
+                }
+
+                if (closest) {
+                    laser.target = closest;
+                    angle = Math.atan2(closest.y - player.y, closest.x - player.x);
+                } else {
+                    // no enemies -> turn off laser
+                    laser.active = false;
+                    laser.target = null;
+                    return;
+                }
+            }
+
+            // 4. Damage every enemy along the beam line
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const e = enemies[j];
+
+                const dist = getDistance(player.x, player.y, e.x, e.y);
+                if (dist > laser.range) continue; // OUT OF RANGE
+
+                const angleToEnemy = Math.atan2(e.y - player.y, e.x - player.x);
+                const angleDiff = Math.abs(angle - angleToEnemy);
+
+                // small tolerance on both sides
+                const tolerance = 0.12;
+
+                if (angleDiff < tolerance || angleDiff > (Math.PI * 2 - tolerance)) {
+                    const finalDamage = calculateDamage(laser.damage, e);
+                    e.hp -= finalDamage;
+
+                    applyPoison(e);
+                    if (player.lifeSteal > 0)
+                        player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+
+                    if (e.hp <= 0) {
+                        dropItem(e.x, e.y, e.xpValue, e.dropsWeaponUpgrade, e.type);
+                        enemies.splice(j, 1);
+                    }
+                }
+            }
+        }
+    }
+}
+            
+            // Orbiting Blades
+            if (weapons.blade.level > 0) {
+                for (let i = 0; i < weapons.blade.count; i++) {
+                    if (!blades[i]) {
+                        blades[i] = { angle: (i * 2 * Math.PI) / weapons.blade.count };
+                    }
+                    blades[i].angle += weapons.blade.speed;
+                }
+            }
+            
+            // Homing Missiles
+            if (weapons.missile.level > 0 && now - weapons.missile.lastFireTime > (weapons.missile.fireRate * cd)) {
+                weapons.missile.lastFireTime = now;
+                
+                if (nearestEnemy) {
+                    const totalProjectiles = weapons.missile.projectileCount + player.bonusProjectiles; // NEW
+                    
+                    for (let i = 0; i < totalProjectiles; i++) {
+                        projectiles.push({
+                            x: player.x,
+                            y: player.y,
+                            radius: 6,
+                            color: '#F59E0B',
+                            vx: 0,
+                            vy: 0,
+                            damage: weapons.missile.damage,
+                            piercing: false,
+                            aoe: true,
+                            aoeRadius: weapons.missile.radius * player.aoeMultiplier,
+                            homing: true,
+                            speed: player.projectileSpeed * 0.8,
+                            turnSpeed: 0.05
+                        });
+                    }
+                }
+            }
+            
+            // Lightning Chain
+            if (weapons.lightning.level > 0 && now - weapons.lightning.lastFireTime > (weapons.lightning.fireRate * cd)) {
+                weapons.lightning.lastFireTime = now;
+                
+                if (nearestEnemy && enemies.length > 0) {
+                    let hitEnemies = [nearestEnemy];
+                    let currentTarget = nearestEnemy;
+                    let chainVisual = [{x: player.x, y: player.y}];
+                    
+                    for (let i = 0; i < weapons.lightning.chainCount && currentTarget; i++) {
+                        chainVisual.push({x: currentTarget.x, y: currentTarget.y});
+                        
+                        // NEW: Damage Calc
+                        const finalDamage = calculateDamage(weapons.lightning.damage * (0.8 ** i), currentTarget);
+                        currentTarget.hp -= finalDamage;
+                        applyPoison(currentTarget); // NEW
+                        if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                        // End NEW
+                        
+                        if (currentTarget.hp <= 0) {
+                            const idx = enemies.indexOf(currentTarget);
+                            if (idx > -1) {
+                                if (player.hasArtifact['titan_slayer'] && currentTarget.type === 'boss') player.hp = player.maxHp; // NEW
+                                if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                                if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                                
+                                dropItem(currentTarget.x, currentTarget.y, currentTarget.xpValue, currentTarget.dropsWeaponUpgrade, currentTarget.type);
+                                enemies.splice(idx, 1);
+                            }
+                        }
+                        
+                        let nextTarget = null;
+                        let minDist = 300;
+                        
+                        for (const enemy of enemies) {
+                            if (!hitEnemies.includes(enemy)) {
+                                const dist = getDistance(currentTarget.x, currentTarget.y, enemy.x, enemy.y);
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    nextTarget = enemy;
+                                }
+                            }
+                        }
+                        
+                        if (nextTarget) {
+                            hitEnemies.push(nextTarget);
+                            currentTarget = nextTarget;
+                        } else {
+                            currentTarget = null; // NEW: Stop chaining if no target found
+                        }
+                    }
+                    
+                    if (chainVisual.length > 1) {
+                        lightningBolts.push({
+                            chain: chainVisual,
+                            createdAt: now
+                        });
+                    }
+                }
+            }
+            
+            // Poison Cloud
+            if (weapons.poison.level > 0 && now - weapons.poison.lastFireTime > (weapons.poison.fireRate * cd)) {
+                weapons.poison.lastFireTime = now;
+                
+                if (nearestEnemy) {
+                    poisonClouds.push({
+                        x: nearestEnemy.x,
+                        y: nearestEnemy.y,
+                        radius: 60 * player.aoeMultiplier,
+                        damage: weapons.poison.damage, // This is damage per second
+                        createdAt: now,
+                        lifetime: weapons.poison.duration * dur // NEW: Use duration
+                    });
+                }
+            }
+            
+            // Ricochet Shot
+            if (weapons.ricochet.level > 0 && now - weapons.ricochet.lastFireTime > (weapons.ricochet.fireRate * cd)) {
+                weapons.ricochet.lastFireTime = now;
+                if (nearestEnemy) {
+                    const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                    const totalProjectiles = weapons.ricochet.projectileCount + player.bonusProjectiles; // NEW
+                    
+                    for (let i = 0; i < totalProjectiles; i++) {
+                        const spread = (Math.random() - 0.5) * 0.2;
+                        projectiles.push({
+                            x: player.x,
+                            y: player.y,
+                            radius: 6,
+                            color: '#FDE047',
+                            vx: Math.cos(angle + spread) * player.projectileSpeed,
+                            vy: Math.sin(angle + spread) * player.projectileSpeed,
+                            damage: weapons.ricochet.damage,
+                            piercing: false,
+                            aoe: false,
+                            ricochet: true,
+                            bouncesLeft: weapons.ricochet.bounces,
+                            hitEnemies: []
+                        });
+                    }
+                }
+            }
+            
+            // Gravity Well
+            if (weapons.gravity.level > 0 && now - weapons.gravity.lastFireTime > (weapons.gravity.fireRate * cd)) {
+                weapons.gravity.lastFireTime = now;
+                if (nearestEnemy) {
+                    const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                    const totalProjectiles = weapons.gravity.projectileCount + player.bonusProjectiles; // NEW
+                    
+                    for (let i = 0; i < totalProjectiles; i++) {
+                        const spread = (Math.random() - 0.5) * 0.1 * i;
+                        projectiles.push({
+                            x: player.x,
+                            y: player.y,
+                            radius: 10,
+                            color: '#6366F1',
+                            vx: Math.cos(angle + spread) * player.projectileSpeed * 0.5,
+                            vy: Math.sin(angle + spread) * player.projectileSpeed * 0.5,
+                            damage: weapons.gravity.damage,
+                            gravityWell: true,
+                            pullRadius: weapons.gravity.radius * player.aoeMultiplier,
+                            pullStrength: weapons.gravity.pullStrength,
+                            lifetime: 2000,
+                        });
+                    }
+                }
+            }
+            
+            // Frost Nova
+            if (weapons.nova.level > 0 && now - weapons.nova.lastFireTime > (weapons.nova.fireRate * cd)) {
+                weapons.nova.lastFireTime = now;
+                novas.push({
+                    x: player.x,
+                    y: player.y,
+                    radius: 0,
+                    maxRadius: weapons.nova.radius * player.aoeMultiplier,
+                    damage: weapons.nova.damage,
+                    slowAmount: weapons.nova.slowAmount,
+                    slowDuration: weapons.nova.slowDuration * dur, // NEW: Use duration
+                    hitEnemies: []
+                });
+            }
+            
+            // Spike Trail
+            if (weapons.spike.level > 0 && hasMoved && now - player.lastSpikeTime > (weapons.spike.fireRate * cd)) {
+                player.lastSpikeTime = now;
+                spikes.push({
+                    x: player.x + (Math.random() - 0.5) * 10,
+                    y: player.y + (Math.random() - 0.5) * 10,
+                    radius: 5,
+                    damage: weapons.spike.damage,
+                    createdAt: now,
+                    lifetime: weapons.spike.duration * dur, // NEW: Use duration
+                    hitEnemies: []
+                });
+            }
+            
+            // Sentry Turret
+            if (weapons.turret.level > 0 && now - weapons.turret.lastDeployTime > (weapons.turret.deployCooldown * cd)) {
+                weapons.turret.lastDeployTime = now;
+                for (let i = 0; i < weapons.turret.count; i++) {
+                    turrets.push({
+                        x: player.x + (i * 20 - (weapons.turret.count - 1) * 10),
+                        y: player.y + 20,
+                        radius: 10,
+                        color: '#F59E0B',
+                        damage: weapons.turret.damage,
+                        fireRate: weapons.turret.fireRate, // Turret fire rate not affected by player cooldown
+                        lastFireTime: 0,
+                        createdAt: now,
+                        lifetime: weapons.turret.duration * dur // NEW: Use duration
+                    });
+                }
+            }
+            
+            // Blood Reaper (Scythe)
+            if (weapons.scythe.level > 0 && now - weapons.scythe.lastFireTime > (weapons.scythe.fireRate * cd)) {
+                weapons.scythe.lastFireTime = now;
+                if (nearestEnemy) {
+                    const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+                    for (let i = 0; i < weapons.scythe.count; i++) {
+                        const angleOffset = (i % 2 === 0 ? 1 : -1) * (Math.PI / 1.5);
+                        const startAngle = angle + angleOffset - (weapons.scythe.arcSize / 2);
+                        const endAngle = angle + angleOffset + (weapons.scythe.arcSize / 2);
+                        
+                        scythes.push({
+                            x: player.x,
+                            y: player.y,
+                            damage: weapons.scythe.damage,
+                            startAngle: startAngle,
+                            endAngle: endAngle,
+                            radius: 100 * player.aoeMultiplier,
+                            createdAt: now,
+                            lifetime: 300,
+                            hitEnemies: []
+                        });
+                    }
+                }
+            }
+        }
+
+        function updateProjectiles(deltaTime) {
+            const now = Date.now();
+            
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                
+                if (p.boomerang) {
+                    if (!p.returning) {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.distanceTraveled += Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                        
+                        if (p.distanceTraveled >= p.maxDistance) {
+                            p.returning = true;
+                        }
+                    } else {
+                        const angle = Math.atan2(player.y - p.y, player.x - p.x);
+                        p.vx = Math.cos(angle) * player.projectileSpeed * 1.5;
+                        p.vy = Math.sin(angle) * player.projectileSpeed * 1.5;
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        
+                        if (getDistance(p.x, p.y, player.x, player.y) < player.radius + p.radius) {
+                            projectiles.splice(i, 1);
+                            continue;
+                        }
+                    }
+                }
+                else if (p.homing) {
+                    let nearestEnemy = null;
+                    let minDis = Infinity;
+                    
+                    for(const enemy of enemies) {
+                        const dis = getDistance(p.x, p.y, enemy.x, enemy.y);
+                        if (dis < minDis) {
+                            minDis = dis;
+                            nearestEnemy = enemy;
+                        }
+                    }
+                    
+                    if (nearestEnemy) {
+                        const targetAngle = Math.atan2(nearestEnemy.y - p.y, nearestEnemy.x - p.x);
+                        const currentAngle = Math.atan2(p.vy, p.vx);
+                        
+                        let angleDiff = targetAngle - currentAngle;
+                        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                        
+                        const newAngle = currentAngle + angleDiff * p.turnSpeed;
+                        p.vx = Math.cos(newAngle) * p.speed;
+                        p.vy = Math.sin(newAngle) * p.speed;
+                    }
+                    
+                    p.x += p.vx;
+                    p.y += p.vy;
+                }
+                else {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                }
+                
+                if (p.ricochet) {
+                    let bounced = false;
+                    if (p.x <= p.radius || p.x >= canvas.width - p.radius) {
+                        p.vx *= -1;
+                        p.x = Math.max(p.radius, Math.min(canvas.width - p.radius, p.x));
+                        bounced = true;
+                    }
+                    if (p.y <= p.radius || p.y >= canvas.height - p.radius) {
+                        p.vy *= -1;
+                        p.y = Math.max(p.radius, Math.min(canvas.height - p.radius, p.y));
+                        bounced = true;
+                    }
+                    
+                    if (bounced) {
+                        p.bouncesLeft--;
+                        p.hitEnemies = [];
+                        if (p.bouncesLeft < 0) {
+                            projectiles.splice(i, 1);
+                            continue;
+                        }
+                    }
+                }
+
+                if (!(p.boomerang && p.returning)) {
+                    if (p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50) {
+                        projectiles.splice(i, 1);
+                    }
+                }
+            }
+            
+            for (let i = poisonClouds.length - 1; i >= 0; i--) {
+                const cloud = poisonClouds[i];
+                if (now - cloud.createdAt > cloud.lifetime) {
+                    poisonClouds.splice(i, 1);
+                }
+            }
+            
+            updateLightningBolts(now);
+        }
+        
+        function updateSpikes(now, deltaTime) {
+            for (let i = spikes.length - 1; i >= 0; i--) {
+                const spike = spikes[i];
+                if (now - spike.createdAt > spike.lifetime) {
+                    spikes.splice(i, 1);
+                }
+            }
+        }
+        
+        function updateTurrets(now, deltaTime) {
+            for (let i = turrets.length - 1; i >= 0; i--) {
+                const t = turrets[i];
+                if (now - t.createdAt > t.lifetime) {
+                    turrets.splice(i, 1);
+                    continue;
+                }
+                
+                if (now - t.lastFireTime > t.fireRate) {
+                    t.lastFireTime = now;
+                    let nearestEnemy = null;
+                    let minDis = 250;
+                    
+                    for(const enemy of enemies) {
+                        const dis = getDistance(t.x, t.y, enemy.x, enemy.y);
+                        if (dis < minDis) {
+                            minDis = dis;
+                            nearestEnemy = enemy;
+                        }
+                    }
+                    
+                    if (nearestEnemy) {
+                        const angle = Math.atan2(nearestEnemy.y - t.y, nearestEnemy.x - t.x);
+                        projectiles.push({
+                            x: t.x,
+                            y: t.y,
+                            radius: 4,
+                            color: '#F59E0B',
+                            vx: Math.cos(angle) * player.projectileSpeed * 0.8,
+                            vy: Math.sin(angle) * player.projectileSpeed * 0.8,
+                            damage: t.damage, // Turret damage is low, won't apply full artifact calc
+                            piercing: false,
+                            aoe: false,
+                        });
+                    }
+                }
+            }
+        }
+        
+        function updateScythes(now, deltaTime) {
+             for (let i = scythes.length - 1; i >= 0; i--) {
+                const scythe = scythes[i];
+                if (now - scythe.createdAt > scythe.lifetime) {
+                    scythes.splice(i, 1);
+                }
+            }
+        }
+        
+        function updateNovas(now, deltaTime) {
+            for (let i = novas.length - 1; i >= 0; i--) {
+                const nova = novas[i];
+                nova.radius += (nova.maxRadius / (200 / deltaTime)); // Unaffected by duration
+                
+                if (nova.radius >= nova.maxRadius) {
+                    novas.splice(i, 1);
+                }
+            }
+        }
+        
+        function updateGravityWells(now, deltaTime) {
+            for (let i = gravityWells.length - 1; i >= 0; i--) {
+                const well = gravityWells[i];
+                
+                if (well.active) {
+                    if (now - well.createdAt > (well.lifetime * player.durationMultiplier)) { // NEW: Use duration
+                        applyAoeDamage(well.x, well.y, well.pullRadius * 0.5, well.damage, -1);
+                        gravityWells.splice(i, 1);
+                        continue;
+                    }
+                }
+            }
+        }
+        
+        function updateLightningBolts(now) {
+            for (let i = lightningBolts.length - 1; i >= 0; i--) {
+                const bolt = lightningBolts[i];
+                if (now - bolt.createdAt > 200) {
+                    lightningBolts.splice(i, 1);
+                }
+            }
+        }
+        
+        // --- NEW: Helper for enemy props ---
+        function getNewEnemyBaseProps(now) {
+            return {
+                teleportTimer: 0,
+                teleportCooldown: 3000,
+                lastBladeHitTime: 0,
+                lastShieldHitTime: 0,
+                slowTimer: 0,
+                slowAmount: 1.0,
+                poisonTimer: 0,
+                poisonDps: 0,
+                // NEW Enemy props
+                shielded: false,
+                shieldTimer: 0,
+                chargeTimer: 0,
+                chargeCooldown: 3000 + Math.random() * 2000,
+                isCharging: false,
+                chargeTarget: {x: 0, y: 0},
+                summonTimer: 0,
+                summonCooldown: 5000 + Math.random() * 3000,
+                explodeTimer: 5000 + Math.random() * 1000,
+                spawnTime: now
+            };
+        }
+
+        function spawnEnemies(now, deltaTime) {
+            game.spawnTimer += deltaTime;
+            
+            if (game.spawnTimer >= game.spawnInterval) {
+                game.spawnTimer = 0;
+                
+                const numToSpawn = 1 + Math.floor(game.wave / 3) + Math.floor(Math.random() * 3);
+                
+                for(let i = 0; i < numToSpawn; i++) {
+                    let x, y;
+                    const side = Math.floor(Math.random() * 4);
+                    const spawnMargin = 50;
+
+                    if (side === 0) {
+                        x = Math.random() * canvas.width;
+                        y = -spawnMargin;
+                    } else if (side === 1) {
+                        x = canvas.width + spawnMargin;
+                        y = Math.random() * canvas.height;
+                    } else if (side === 2) {
+                        x = Math.random() * canvas.width;
+                        y = canvas.height + spawnMargin;
+                    } else {
+                        x = -spawnMargin;
+                        y = Math.random() * canvas.height;
+                    }
+
+                    let sides, color, hp, speed, radius, xpValue, damage, dropsWeaponUpgrade = false;
+                    let enemyType = 'normal';
+                    const typeRoll = Math.random();
+                    
+                    const baseProps = getNewEnemyBaseProps(now);
+
+                    if (game.wave < 2 || typeRoll < 0.20) { // Triangle
+                        sides = 3; color = '#F87171'; radius = 12;
+                        hp = 8 + game.wave * 2;
+                        speed = 1 + Math.random() * 0.5 + game.wave * 0.12;
+                        damage = 50; xpValue = 2;
+                    } else if (typeRoll < 0.30) { // NEW: Swarm
+                        sides = 3; color = '#DC2626'; radius = 8;
+                        hp = 3 + game.wave * 1;
+                        speed = 1.8 + Math.random() * 0.5 + game.wave * 0.15;
+                        damage = 30; xpValue = 1;
+                        enemyType = 'swarm';
+                        // Spawn a pack
+                        for (let j = 0; j < 4; j++) {
+                            enemies.push({
+                                x: x + (Math.random() - 0.5) * 30, y: y + (Math.random() - 0.5) * 30,
+                                radius, sides, color, originalColor: color,
+                                hp, maxHp: hp, speed: Math.min(speed, player.speed * 1.5),
+                                damage, xpValue, dropsWeaponUpgrade,
+                                type: enemyType, ...baseProps
+                            });
+                        }
+                    } else if (typeRoll < 0.40) { // Square
+                        sides = 4; color = '#F472B6'; radius = 15;
+                        hp = 25 + game.wave * 3.5;
+                        speed = 0.8 + Math.random() * 0.4 + game.wave * 0.07;
+                        damage = 100; xpValue = 6;
+                    } else if (typeRoll < 0.50) { // Pentagon
+                        sides = 5; color = '#C084FC'; radius = 18;
+                        hp = 50 + game.wave * 6;
+                        speed = 0.6 + Math.random() * 0.3 + game.wave * 0.05;
+                        damage = 150; xpValue = 10;
+                    } else if (typeRoll < 0.58) { // Hexagon (Elite)
+                        sides = 6; color = '#F59E0B'; radius = 20;
+                        hp = 100 + game.wave * 12;
+                        speed = 0.5 + Math.random() * 0.3 + game.wave * 0.03;
+                        damage = 200; xpValue = 15;
+                        enemyType = 'hexagon';
+                        if (Math.random() < 0.30) dropsWeaponUpgrade = true;
+                    } else if (typeRoll < 0.65 && game.wave >= 2) { // NEW: Dasher
+                        sides = 4; color = '#22D3EE'; radius = 14;
+                        hp = 20 + game.wave * 3;
+                        speed = 1.5 + game.wave * 0.1; // Base speed
+                        damage = 90; xpValue = 7;
+                        enemyType = 'dasher';
+                    } else if (typeRoll < 0.70 && game.wave >= 2) { // NEW: Wisp
+                        sides = 50; color = '#F9FAFB'; radius = 8;
+                        hp = 5 + game.wave * 1;
+                        speed = 2.8 + game.wave * 0.2;
+                        damage = 40; xpValue = 3;
+                        enemyType = 'wisp';
+                    } else if (typeRoll < 0.75 && game.wave >= 3) { // NEW: Kamikaze
+                        sides = 50; color = '#F97316'; radius = 16;
+                        hp = 10 + game.wave * 2;
+                        speed = 1.2 + game.wave * 0.1;
+                        damage = 200; xpValue = 5; // Damage is AOE
+                        enemyType = 'kamikaze';
+                    } else if (typeRoll < 0.80 && game.wave >= 3) { // NEW: Leech
+                        sides = 7; color = '#A855F7'; radius = 15;
+                        hp = 40 + game.wave * 5;
+                        speed = 0.7 + game.wave * 0.05;
+                        damage = 10; xpValue = 8; // Low damage, but heals
+                        enemyType = 'leech';
+                    } else if (typeRoll < 0.85 && game.wave >= 4) { // NEW: Shielder
+                        sides = 8; color = '#9CA3AF'; radius = 18;
+                        hp = 80 + game.wave * 10;
+                        speed = 0.6 + game.wave * 0.04;
+                        damage = 120; xpValue = 12;
+                        enemyType = 'shielder';
+                        baseProps.shielded = true;
+                        baseProps.shieldTimer = 3000;
+                    } else if (typeRoll < 0.90 && game.wave >= 5) { // NEW: Summoner
+                        sides = 5; color = '#FDE047'; radius = 16;
+                        hp = 60 + game.wave * 7;
+                        speed = 0.5 + game.wave * 0.03;
+                        damage = 80; xpValue = 15;
+                        enemyType = 'summoner';
+                    } else if (typeRoll < 0.95 && game.wave >= 6) { // NEW: Tank
+                        sides = 4; color = '#15803D'; radius = 25;
+                        hp = 250 + game.wave * 20;
+                        speed = 0.4 + game.wave * 0.02;
+                        damage = 250; xpValue = 30;
+                        enemyType = 'tank';
+                    } else if (game.wave >= 7) { // Boss
+                        sides = 8; color = '#DC2626'; radius = 35;
+                        hp = 300 + game.wave * 35;
+                        speed = 0.4 + Math.random() * 0.2 + game.wave * 0.03;
+                        damage = 300; xpValue = 50;
+                        enemyType = 'boss';
+                        dropsWeaponUpgrade = true;
+                    } else { // Fallback: Triangle
+                        sides = 3; color = '#F87171'; radius = 12;
+                        hp = 8 + game.wave * 2;
+                        speed = 1 + Math.random() * 0.5 + game.wave * 0.12;
+                        damage = 50; xpValue = 2;
+                    }
+
+                    if (enemyType !== 'swarm') { // Swarm is handled specially
+                        enemies.push({
+                            x, y, radius, sides, color, originalColor: color,
+                            hp, maxHp: hp, speed: Math.min(speed, player.speed * 1.5),
+                            damage, xpValue, dropsWeaponUpgrade,
+                            type: enemyType, ...baseProps
+                        });
+                    }
+                }
+            }
+        }
+
+        function updateEnemies(now, deltaTime) {
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                // --- NEW: Apply Poison Damage ---
+                if (enemy.poisonTimer > 0) {
+                    enemy.hp -= enemy.poisonDps * (deltaTime / 1000);
+                    enemy.poisonTimer -= deltaTime;
+                    if (enemy.poisonTimer <= 0) {
+                        enemy.poisonDps = 0; // Reset dps
+                    }
+                    
+                    if (enemy.hp <= 0) {
+                        if (player.hasArtifact['titan_slayer'] && (enemy.type === 'boss' || enemy.type === 'tank' || enemy.type === 'hexagon')) player.hp = player.maxHp;
+                        if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill);
+                        if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; }
+                        
+                        dropItem(enemy.x, enemy.y, enemy.xpValue, enemy.dropsWeaponUpgrade, enemy.type);
+                        enemies.splice(i, 1);
+                        continue; // Skip rest of update for this enemy
+                    }
+                }
+                // --- End Poison ---
+                
+                // --- NEW: Unique Enemy Logic ---
+                let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                let currentSpeed = enemy.speed;
+                
+                if (enemy.type === 'shielder' && enemy.shielded) {
+                    enemy.shieldTimer -= deltaTime;
+                    if (enemy.shieldTimer <= 0) {
+                        enemy.shielded = false;
+                        enemy.color = enemy.originalColor;
+                    }
+                }
+                
+                if (enemy.type === 'dasher') {
+                    if (enemy.isCharging) {
+                        currentSpeed = 8 + game.wave * 0.2; // Charge speed
+                        angle = Math.atan2(enemy.chargeTarget.y - enemy.y, enemy.chargeTarget.x - enemy.x);
+                        if (getDistance(enemy.x, enemy.y, enemy.chargeTarget.x, enemy.chargeTarget.y) < 20) {
+                            enemy.isCharging = false;
+                            enemy.chargeTimer = 0;
+                        }
+                    } else {
+                        enemy.chargeTimer += deltaTime;
+                        if (enemy.chargeTimer > enemy.chargeCooldown) {
+                            enemy.isCharging = true;
+                            // Charge *through* the player
+                            const chargeAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                            enemy.chargeTarget.x = enemy.x + Math.cos(chargeAngle) * 500;
+                            enemy.chargeTarget.y = enemy.y + Math.sin(chargeAngle) * 500;
+                        }
+                    }
+                }
+                
+                if (enemy.type === 'summoner') {
+                    const distToPlayer = getDistance(player.x, player.y, enemy.x, enemy.y);
+                    if (distToPlayer < 300) { // Flee
+                        angle += Math.PI;
+                    }
+                    enemy.summonTimer += deltaTime;
+                    if (enemy.summonTimer > enemy.summonCooldown) {
+                        enemy.summonTimer = 0;
+                        for (let j = 0; j < 2; j++) {
+                             enemies.push({
+                                x: enemy.x + (Math.random() - 0.5) * 20, y: enemy.y + (Math.random() - 0.5) * 20,
+                                radius: 8, sides: 3, color: '#F87171', originalColor: '#F87171',
+                                hp: 3 + game.wave, maxHp: 3 + game.wave, speed: 1.5 + game.wave * 0.1,
+                                damage: 30, xpValue: 1, dropsWeaponUpgrade: false,
+                                type: 'swarm', ...getNewEnemyBaseProps(now)
+                            });
+                        }
+                    }
+                }
+                
+                if (enemy.type === 'wisp') {
+                    angle += (Math.random() - 0.5) * 2; // Erratic
+                }
+                
+                if (enemy.type === 'kamikaze') {
+                    enemy.explodeTimer -= deltaTime;
+                    if (enemy.explodeTimer <= 0 || getDistance(player.x, player.y, enemy.x, enemy.y) < 40) {
+                        applyAoeDamage(enemy.x, enemy.y, 80, enemy.damage, i); // Explode
+                        enemies.splice(i, 1);
+                        continue;
+                    }
+                }
+                
+                if (enemy.type === 'teleporter') { // Old logic
+                    enemy.teleportTimer += deltaTime;
+                    if (enemy.teleportTimer >= enemy.teleportCooldown) {
+                        const tpAngle = Math.random() * Math.PI * 2;
+                        const distance = 100 + Math.random() * 100;
+                        enemy.x = player.x + Math.cos(tpAngle) * distance;
+                        enemy.y = player.y + Math.sin(tpAngle) * distance;
+                        enemy.teleportTimer = 0;
+                    }
+                }
+                // --- End Unique Logic ---
+                
+                let pullVx = 0;
+                let pullVy = 0;
+                for (const well of gravityWells) {
+                    if (well.active) {
+                        const dist = getDistance(well.x, well.y, enemy.x, enemy.y);
+                        if (dist < well.pullRadius) {
+                            const pullAngle = Math.atan2(well.y - enemy.y, well.x - enemy.x);
+                            pullVx += Math.cos(pullAngle) * well.pullStrength * (1 - dist / well.pullRadius);
+                            pullVy += Math.sin(pullAngle) * well.pullStrength * (1 - dist / well.pullRadius);
+                        }
+                    }
+                }
+                
+                let speedMultiplier = 1.0;
+                if (enemy.slowTimer > 0) {
+                    speedMultiplier = enemy.slowAmount;
+                    enemy.slowTimer -= deltaTime;
+                } else {
+                    enemy.slowAmount = 1.0;
+                }
+                
+                enemy.x += Math.cos(angle) * currentSpeed * speedMultiplier + pullVx;
+                enemy.y += Math.sin(angle) * currentSpeed * speedMultiplier + pullVy;
+            }
+            
+            // --- Update Poison Clouds ---
+            for (const cloud of poisonClouds) {
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    const enemy = enemies[i];
+                    if (enemy.shielded) continue; // NEW: Can't poison shield
+                    
+                    const dist = getDistance(cloud.x, cloud.y, enemy.x, enemy.y);
+                    if (dist < cloud.radius) {
+                        // NEW: Damage Calc
+                        const finalDamage = calculateDamage(cloud.damage * (deltaTime / 1000), enemy);
+                        enemy.hp -= finalDamage;
+                        if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                        // End NEW
+                        
+                        if (enemy.hp <= 0) {
+                            if (player.hasArtifact['titan_slayer'] && (enemy.type === 'boss' || enemy.type === 'tank' || enemy.type === 'hexagon')) player.hp = player.maxHp; // NEW
+                            if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                            if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                            
+                            dropItem(enemy.x, enemy.y, enemy.xpValue, enemy.dropsWeaponUpgrade, enemy.type);
+                            enemies.splice(i, 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateXPOrbs(deltaTime) {
+            for (const orb of xpOrbs) {
+                const dis = getDistance(player.x, player.y, orb.x, orb.y);
+                if (dis < player.magnetRange) {
+                    const angle = Math.atan2(player.y - orb.y, player.x - orb.x);
+                    orb.x += Math.cos(angle) * 8;
+                    orb.y += Math.sin(angle) * 8;
+                }
+            }
+        }
+
+        function applyAoeDamage(centerX, centerY, radius, damage, excludeIndex) {
+             for (let j = enemies.length - 1; j >= 0; j--) {
+                 if (j === excludeIndex) continue;
+
+                 const e = enemies[j];
+                 if (e.shielded) continue; // NEW: Shield blocks AOE
+                 
+                 const dis = getDistance(centerX, centerY, e.x, e.y);
+                 if (dis < radius + e.radius) {
+                     // NEW: Damage Calc
+                     const finalDamage = calculateDamage(damage, e);
+                     e.hp -= finalDamage;
+                     applyPoison(e); // NEW
+                     if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                     // End NEW
+                     
+                     if (e.hp <= 0) {
+                         if (player.hasArtifact['titan_slayer'] && (e.type === 'boss' || e.type === 'tank' || e.type === 'hexagon')) player.hp = player.maxHp; // NEW
+                         if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                         if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                         
+                         dropItem(e.x, e.y, e.xpValue, e.dropsWeaponUpgrade, e.type);
+                         enemies.splice(j, 1);
+                     }
+                 }
+             }
+        }
+
+        function checkCollisions(now) {
+            // --- Projectile vs Enemy ---
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                let projectileRemoved = false;
+                
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    
+                    if (p.gravityWell) {
+                        if (getDistance(p.x, p.y, e.x, e.y) < p.radius + e.radius) {
+                            gravityWells.push({
+                                x: p.x,
+                                y: p.y,
+                                radius: p.radius,
+                                color: p.color,
+                                pullRadius: p.pullRadius,
+                                pullStrength: p.pullStrength,
+                                damage: p.damage,
+                                active: true,
+                                lifetime: 2000,
+                                createdAt: now,
+                            });
+                            projectiles.splice(i, 1);
+                            projectileRemoved = true;
+                            break;
+                        }
+                    }
+                    
+                    if (getDistance(p.x, p.y, e.x, e.y) < p.radius + e.radius) {
+                        
+                        if (e.shielded) { // NEW: Shield block
+                            projectiles.splice(i, 1);
+                            projectileRemoved = true;
+                            break;
+                        }
+                        
+                        if ((p.piercing || p.ricochet) && p.hitEnemies.includes(e)) {
+                            continue;
+                        }
+                        
+                        // --- NEW: Damage Calculation ---
+                        const finalDamage = calculateDamage(p.damage, e);
+                        e.hp -= finalDamage;
+                        applyPoison(e); // Apply poison
+                        
+                        if (player.lifeSteal > 0) {
+                            player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                        }
+                        // --- End Damage Calculation ---
+                        
+                        if (p.aoe) {
+                            applyAoeDamage(p.x, p.y, p.aoeRadius, p.damage * 0.5, j);
+                        }
+                        
+                        // --- NEW: Shockwave Core Splash ---
+                        if (player.hasArtifact['shockwave_core'] && !p.aoe && !p.piercing && !p.boomerang && !p.ricochet && !p.gravityWell) {
+                            applyAoeDamage(p.x, p.y, 30, p.damage * 0.3, j); // 30% damage splash
+                        }
+                        // --- End Shockwave ---
+
+                        if (p.piercing) {
+                            p.hitEnemies.push(e);
+                            p.pierceLeft--;
+                            if (p.pierceLeft <= 0) {
+                                projectiles.splice(i, 1);
+                                projectileRemoved = true;
+                            }
+                        } else if (p.aoe) {
+                            projectiles.splice(i, 1);
+                            projectileRemoved = true;
+                        } else if (!p.boomerang && !p.ricochet && !p.gravityWell) {
+                            projectiles.splice(i, 1); 
+                            projectileRemoved = true;
+                        }
+                        
+                        if (p.ricochet) {
+                            p.hitEnemies.push(e);
+                        }
+                        
+                        if (e.hp <= 0) {
+                            if (e.type === 'splitter') {
+                                for (let k = 0; k < 2; k++) {
+                                    enemies.push({
+                                        x: e.x, y: e.y,
+                                        radius: e.radius * 0.6, sides: 3,
+                                        color: '#A78BFA', originalColor: '#A78BFA',
+                                        hp: e.maxHp * 0.3, maxHp: e.maxHp * 0.3,
+                                        speed: e.speed * 1.3, damage: e.damage * 0.5,
+                                        xpValue: Math.floor(e.xpValue * 0.3),
+                                        dropsWeaponUpgrade: false, type: 'normal',
+                                        ...getNewEnemyBaseProps(now)
+                                    });
+                                }
+                            }
+                            
+                            if (player.hasArtifact['titan_slayer'] && (e.type === 'boss' || e.type === 'tank' || e.type === 'hexagon')) player.hp = player.maxHp; // NEW
+                            if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                            if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                            
+                            dropItem(e.x, e.y, e.xpValue, e.dropsWeaponUpgrade, e.type);
+                            enemies.splice(j, 1);
+                        }
+                        
+                        if (projectileRemoved) break; 
+                    }
+                }
+            }
+            
+            // --- Passive Weapon vs Enemy ---
+            if (player.weapons.shield.count > 0) {
+                for(let i = 0; i < player.weapons.shield.count; i++) {
+                    const angle = player.orbitAngle + (i * (2 * Math.PI) / player.weapons.shield.count);
+                    const shieldOrbitRadius = 40 * player.aoeMultiplier;
+                    const shieldX = player.x + Math.cos(angle) * shieldOrbitRadius;
+                    const shieldY = player.y + Math.sin(angle) * shieldOrbitRadius;
+                    const shieldRadius = 10 * player.aoeMultiplier;
+                    
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                         const e = enemies[j];
+                         if (e.shielded) continue;
+                         if (getDistance(shieldX, shieldY, e.x, e.y) < shieldRadius + e.radius) {
+                             if (now - e.lastShieldHitTime < 500) continue;
+                             e.lastShieldHitTime = now;
+                             
+                             const finalDamage = calculateDamage(player.weapons.shield.damage, e);
+                             e.hp -= finalDamage;
+                             applyPoison(e);
+                             if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                             
+                             if (e.hp <= 0) {
+                                if (e.type === 'splitter') { /* ... splitter logic ... */ }
+                                if (player.hasArtifact['titan_slayer'] && (e.type === 'boss' || e.type === 'tank' || e.type === 'hexagon')) player.hp = player.maxHp; // NEW
+                                if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                                if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                                dropItem(e.x, e.y, e.xpValue, e.dropsWeaponUpgrade, e.type);
+                                enemies.splice(j, 1);
+                             }
+                         }
+                    }
+                }
+            }
+            
+            if (player.weapons.blade.level > 0) {
+                for (let i = 0; i < player.weapons.blade.count; i++) {
+                    const blade = blades[i];
+                    if (!blade) continue;
+                    
+                    const bladeOrbitRadius = 60 * player.aoeMultiplier;
+                    const bladeX = player.x + Math.cos(blade.angle) * bladeOrbitRadius;
+                    const bladeY = player.y + Math.sin(blade.angle) * bladeOrbitRadius;
+                    const bladeRadius = 12 * player.aoeMultiplier;
+                    
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        const e = enemies[j];
+                        if (e.shielded) continue;
+                        if (getDistance(bladeX, bladeY, e.x, e.y) < bladeRadius + e.radius) {
+                            if (now - e.lastBladeHitTime < 500) continue;
+                            e.lastBladeHitTime = now;
+                            
+                             const finalDamage = calculateDamage(player.weapons.blade.damage, e);
+                             e.hp -= finalDamage;
+                             applyPoison(e);
+                             if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                            
+                            if (e.hp <= 0) {
+                                if (e.type === 'splitter') { /* ... splitter logic ... */ }
+                                if (player.hasArtifact['titan_slayer'] && (e.type === 'boss' || e.type === 'tank' || e.type === 'hexagon')) player.hp = player.maxHp; // NEW
+                                if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                                if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                                dropItem(e.x, e.y, e.xpValue, e.dropsWeaponUpgrade, e.type);
+                                enemies.splice(j, 1);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            for (const spike of spikes) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    if (e.shielded) continue;
+                    if (getDistance(spike.x, spike.y, e.x, e.y) < spike.radius + e.radius) {
+                        if (!spike.hitEnemies.includes(e)) {
+                             const finalDamage = calculateDamage(spike.damage, e);
+                             e.hp -= finalDamage;
+                             applyPoison(e);
+                             if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                            spike.hitEnemies.push(e);
+                            
+                            if (e.hp <= 0) {
+                                if (e.type === 'splitter') { /* ... splitter logic ... */ }
+                                if (player.hasArtifact['titan_slayer'] && (e.type === 'boss' || e.type === 'tank' || e.type === 'hexagon')) player.hp = player.maxHp; // NEW
+                                if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                                if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                                dropItem(e.x, e.y, e.xpValue, e.dropsWeaponUpgrade, e.type);
+                                enemies.splice(j, 1);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            for (const scythe of scythes) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    if (e.shielded) continue;
+                    if (scythe.hitEnemies.includes(e)) continue;
+                    
+                    const dist = getDistance(scythe.x, scythe.y, e.x, e.y);
+                    if (dist < scythe.radius + e.radius && dist > scythe.radius - 30) {
+                        let angle = Math.atan2(e.y - scythe.y, e.x - scythe.x);
+                        let sAngle = scythe.startAngle;
+                        let eAngle = scythe.endAngle;
+                        
+                        if (eAngle < sAngle) {
+                            eAngle += 2 * Math.PI;
+                            if (angle < sAngle) {
+                                angle += 2 * Math.PI;
+                            }
+                        }
+                        
+                        if (angle > sAngle && angle < eAngle) {
+                             const finalDamage = calculateDamage(scythe.damage, e);
+                             e.hp -= finalDamage;
+                             applyPoison(e);
+                             if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                            scythe.hitEnemies.push(e);
+                            
+                            if (e.hp <= 0) {
+                                if (e.type === 'splitter') { /* ... splitter logic ... */ }
+                                if (player.hasArtifact['titan_slayer'] && (e.type === 'boss' || e.type === 'tank' || e.type === 'hexagon')) player.hp = player.maxHp; // NEW
+                                if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                                if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                                dropItem(e.x, e.y, e.xpValue, e.dropsWeaponUpgrade, e.type);
+                                enemies.splice(j, 1);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            for (const nova of novas) {
+                if (nova.radius < 20) continue;
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    if (e.shielded) continue;
+                    if (nova.hitEnemies.includes(e)) continue;
+                    
+                    const dist = getDistance(nova.x, nova.y, e.x, e.y);
+                    if (dist < nova.radius + e.radius && dist > nova.radius - 20) {
+                        const finalDamage = calculateDamage(nova.damage, e);
+                        e.hp -= finalDamage;
+                        applyPoison(e);
+                        if (player.lifeSteal > 0) player.hp = Math.min(player.maxHp, player.hp + finalDamage * player.lifeSteal);
+                        e.slowTimer = nova.slowDuration;
+                        e.slowAmount = 1.0 - nova.slowAmount;
+                        nova.hitEnemies.push(e);
+                        
+                        if (e.hp <= 0) {
+                            if (e.type === 'splitter') { /* ... splitter logic ... */ }
+                            if (player.hasArtifact['titan_slayer'] && (e.type === 'boss' || e.type === 'tank' || e.type === 'hexagon')) player.hp = player.maxHp; // NEW
+                            if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill); // NEW
+                            if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; } // NEW
+                            dropItem(e.x, e.y, e.xpValue, e.dropsWeaponUpgrade, e.type);
+                            enemies.splice(j, 1);
+                        }
+                    }
+                }
+            }
+
+            // --- Player vs Enemy ---
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                if (getDistance(player.x, player.y, enemy.x, enemy.y) < player.radius + enemy.radius) {
+                    
+                    if (Math.random() < player.dodgeChance) {
+                        continue;
+                    }
+                
+                    if (!player.invincible) { 
+                        let incomingDamage = enemy.damage - player.armor; // NEW: Apply armor
+                        if (incomingDamage < 1) incomingDamage = 1;
+                        
+                        player.hp -= incomingDamage;
+                        
+                        // NEW: Leech Logic
+                        if (enemy.type === 'leech') {
+                            enemy.hp = Math.min(enemy.maxHp, enemy.hp + incomingDamage * 2); // Heals double
+                        }
+                        
+                        // --- NEW: Thorns & Reflect ---
+                        let thornDamage = player.thornsDamage;
+                        if (player.hasArtifact['thorned_carapace']) {
+                            thornDamage += (enemy.damage * 0.25);
+                        }
+                        
+                        if (thornDamage > 0) {
+                            const finalThornDamage = calculateDamage(thornDamage, enemy); // Thorns can crit!
+                            enemy.hp -= finalThornDamage;
+                            applyPoison(enemy);
+                            
+                            if (enemy.hp <= 0) {
+                                if (enemy.type === 'splitter') { /* ... splitter logic ... */ }
+                                if (player.hasArtifact['titan_slayer'] && (enemy.type === 'boss' || enemy.type === 'tank' || enemy.type === 'hexagon')) player.hp = player.maxHp;
+                                if (player.healOnKill > 0) player.hp = Math.min(player.maxHp, player.hp + player.healOnKill);
+                                if (player.hasArtifact['soul_collector'] && player.soulCollectorKills < 200) { player.soulCollectorKills++; player.maxHp++; player.hp++; }
+                                
+                                const idx = enemies.indexOf(enemy);
+                                if (idx > -1) {
+                                    dropItem(enemy.x, enemy.y, enemy.xpValue, enemy.dropsWeaponUpgrade, enemy.type);
+                                    enemies.splice(idx, 1);
+                                }
+                                continue; // Avoid hitting player twice
+                            }
+                        }
+                        // --- End Thorns ---
+                        
+                        player.invincible = true;
+                        player.invincibleTimer = player.invincibilityDuration;
+
+                        if (player.hp <= 0) {
+                            player.hp = 0;
+                            
+                            // --- NEW: Phoenix Heart & Last Stand ---
+                            if (player.hasArtifact['phoenix_heart'] && !player.phoenixHeartUsed) {
+                                player.phoenixHeartUsed = true;
+                                player.hp = player.maxHp;
+                                player.invincible = true;
+                                player.invincibleTimer = 5000;
+                            }
+                            else if (player.hasLastStand) {
+                                player.hasLastStand = false; // Used up
+                                player.hp = 1;
+                                player.invincible = true;
+                                player.invincibleTimer = 3000;
+                            } else {
+                                game.gameOver = true;
+                            }
+                            // --- End NEW ---
+                        }
+                    }
+                }
+            }
+
+            // --- Orb Collection ---
+            for (let i = xpOrbs.length - 1; i >= 0; i--) {
+                const orb = xpOrbs[i];
+                if (getDistance(player.x, player.y, orb.x, orb.y) < player.radius + orb.radius) {
+                    if (orb.type === 'XP') {
+                        gainXP(orb.value);
+                    } else if (orb.type === 'WEAPON') {
+                        showWeaponUpgradeModal();
+                    } else if (orb.type === 'ARTIFACT') { // NEW
+                        showArtifactModal(); // No longer passes data
+                    } else if (orb.type === 'GOLD') { // NEW
+                        player.gold += Math.floor(orb.value * player.goldMultiplier); // NEW: Apply multiplier
+                    }
+                    xpOrbs.splice(i, 1); // Splice orb *after* processing
+                }
+            }
+        }
+        
+        // --- NEW: Updated dropItem logic ---
+        function dropItem(x, y, xpValue, dropsWeaponUpgrade, enemyType) {
+            const artifactCount = player.artifacts.length;
+            
+            // --- NEW: Gold Drop (Always) ---
+            let goldValue = 1;
+            if (enemyType === 'boss') goldValue = 100 + Math.floor(Math.random() * 25);
+            else if (enemyType === 'tank') goldValue = 15 + Math.floor(Math.random() * 10);
+            else if (enemyType === 'hexagon' || enemyType === 'summoner' || enemyType === 'shielder') goldValue = 8 + Math.floor(Math.random() * 5);
+            else if (enemyType === 'leech' || enemyType === 'dasher') goldValue = 5 + Math.floor(Math.random() * 3);
+            else if (enemyType === 'kamikaze' || enemyType === 'wisp') goldValue = 2 + Math.floor(Math.random() * 2);
+            else if (enemyType === 'swarm') goldValue = 1;
+            else goldValue = 3 + Math.floor(Math.random() * 2); // Normal
+            
+            xpOrbs.push({
+                x: x + (Math.random() - 0.5) * 10,
+                y: y + (Math.random() - 0.5) * 10,
+                type: 'GOLD',
+                value: goldValue,
+                radius: 3,
+                color: '#E5E7EB' // Silver
+            });
+            // --- End Gold Drop ---
+
+            // 1. Boss Artifact Drop
+            if (enemyType === 'boss' && artifactCount < player.maxArtifacts) {
+                // 30% at 4 artifacts, 45% at 0 artifacts
+                let dropChance = 0.30 + (0.15 * (player.maxArtifacts - artifactCount) / player.maxArtifacts);
+                if (Math.random() < dropChance) {
+                    const artifact = pickRandomArtifact(); // Still pick one to check
+                    if (artifact) { // Check if any artifacts are left
+                        xpOrbs.push({ 
+                             x, y, 
+                             type: 'ARTIFACT', 
+                             radius: 12, 
+                             color: '#F59E0B', // Generic gold color
+                             // No artifactData
+                         });
+                         return; // Artifact dropped, nothing else
+                    }
+                }
+            }
+            
+            // 2. Weapon Drop (from Bosses/Hexagons)
+            if (dropsWeaponUpgrade && !areAllWeaponsMaxed()) {
+                 xpOrbs.push({ 
+                     x, y, 
+                     type: 'WEAPON', 
+                     radius: 8, 
+                     color: '#EC4899',
+                 });
+                 return;
+            }
+            
+            // 3. Regular Enemy Weapon Drop (2%)
+            if (enemyType !== 'boss' && !dropsWeaponUpgrade && !areAllWeaponsMaxed() && Math.random() < 0.02) {
+                 xpOrbs.push({ 
+                     x, y, 
+                     type: 'WEAPON', 
+                     radius: 8, 
+                     color: '#EC4899',
+                 });
+                 return;
+            }
+            
+            // 4. Consolation XP
+            if (dropsWeaponUpgrade) { // Was a weapon drop, but all are maxed
+                 xpValue *= 3;
+            }
+            
+            // 5. Default XP Drop
+            xpOrbs.push({ 
+                x, y, 
+                type: 'XP', 
+                value: xpValue, 
+                radius: 4, 
+                color: '#FBBF24' // Changed from yellow-300
+            }); 
+        }
+        
+        function gainXP(amount) {
+            // NEW: Apply XP gain bonus
+            let finalAmount = amount;
+            if (player.hasArtifact['gravity_well_core']) {
+                finalAmount *= 1.25;
+            }
+            
+            player.xp += finalAmount;
+            while (player.xp >= player.xpToNextLevel) {
+                const excessXp = player.xp - player.xpToNextLevel;
+                levelUp();
+                player.xp = excessXp;
+            }
+        }
+        
+        function levelUp() {
+            pauseGame();
+            player.level++;
+            player.xpToNextLevel = Math.floor(player.xpToNextLevel * 1.4);
+            
+            player.hp = player.maxHp; 
+            
+            showLevelUpModal();
+        }
+
+        const powerUpPool = [
+            { 
+                id: 'hp', 
+                title: 'Fortify', 
+                desc: 'Increase Max HP by 20.',
+                apply: (p) => { 
+                    p.maxHp += 20;
+                    p.hp += 20; // Heal for the same amount
+                } 
+            },
+            { 
+                id: 'speed', 
+                title: 'Agility', 
+                desc: 'Increase movement speed by 8%.', // NERF: 10% -> 8%
+                apply: (p) => { p.speed *= 1.08; } 
+            },
+            { 
+                id: 'magnet', 
+                title: 'Greed', 
+                desc: 'Increase XP pickup range by 25%.',
+                apply: (p) => { p.magnetRange *= 1.25; } 
+            },
+            {
+                id: 'main_damage',
+                title: 'Sharpshooter (Main L+)',
+                desc: 'Increase Main Shot damage by 4.',
+                apply: (p) => { p.weapons.main.damage += 4; p.weapons.main.level++; }, // NERF: 8 -> 4
+                available: (p) => p.weapons.main.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'main_firerate',
+                title: 'Auto-Loader (Main L+)',
+                desc: 'Increase Main Shot fire rate by 8%.',
+                apply: (p) => { p.weapons.main.fireRate *= 0.92; p.weapons.main.level++; }, // NERF: 0.85 -> 0.92
+                available: (p) => p.weapons.main.level < MAX_WEAPON_LEVEL
+            },
+            { 
+                id: 'projectiles', 
+                title: 'Multi-Shot (Main L+)', 
+                desc: 'Fire +1 main projectile.',
+                apply: (p) => { p.weapons.main.projectileCount += 1; p.weapons.main.level++; },
+                available: (p) => p.weapons.main.level < MAX_WEAPON_LEVEL && p.weapons.main.projectileCount < 5
+            },
+            {
+                id: 'max_hp_boost',
+                title: 'Iron Will',
+                desc: 'Massively increase Max HP by 40.', // NERF: 50 -> 40
+                apply: (p) => { p.maxHp += 40; p.hp += 40; }
+            },
+            {
+                id: 'crit_chance',
+                title: 'Critical Strike',
+                desc: 'Gain 5% chance to deal double damage.', // NERF: 10% -> 5%
+                apply: (p) => { p.critChance += 0.05; }
+            },
+            {
+                id: 'crit_multi',
+                title: 'Lethal Precision',
+                desc: 'Increase critical hit multiplier by 0.25x.', // NERF: 0.5 -> 0.25
+                apply: (p) => { p.critMultiplier += 0.25; },
+                available: (p) => p.critChance > 0
+            },
+            {
+                id: 'lifesteal',
+                title: 'Vampirism',
+                desc: 'Heal 1% of damage dealt.',
+                apply: (p) => { p.lifeSteal += 0.01; }, // NERF: 0.02 -> 0.01
+                available: (p) => !p.hasArtifact['blood_pact']
+            },
+            {
+                id: 'thorns',
+                title: 'Thorns',
+                desc: 'Deal 25 damage to enemies that hit you.', // NERF: 50 -> 25
+                apply: (p) => { p.thornsDamage += 25; }
+            },
+            {
+                id: 'invuln_time',
+                title: 'Guardian Angel',
+                desc: 'Increase invincibility duration by 250ms.', // NERF: 500 -> 250
+                apply: (p) => { p.invincibilityDuration += 250; }
+            },
+            {
+                id: 'projectile_speed',
+                title: 'Ballistics',
+                desc: 'Increase projectile speed by 15%.', // NERF: 20% -> 15%
+                apply: (p) => { p.projectileSpeed *= 1.15; }
+            },
+            { // REWORKED
+                id: 'heal_percent',
+                title: 'First Aid Kit',
+                desc: 'Heal 25% of your Max HP immediately.',
+                apply: (p) => { 
+                    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25);
+                }
+            },
+            { // REWORKED
+                id: 'weapon_size',
+                title: 'Heavy Caliber',
+                desc: 'Increase all AOE sizes and projectile sizes by 10%.',
+                apply: (p) => { p.aoeMultiplier *= 1.1; }
+            },
+            {
+                id: 'evasion',
+                title: 'Elusive',
+                desc: 'Gain 5% chance to dodge enemy attacks.',
+                apply: (p) => { p.dodgeChance = Math.min(0.25, p.dodgeChance + 0.05); },
+                available: (p) => p.dodgeChance < 0.25
+            },
+            {
+                id: 'hp_regen',
+                title: 'Regeneration',
+                desc: 'Passively regenerate 0.5 HP per second.',
+                apply: (p) => { p.hpRegen += 0.5; }
+            },
+            { // NEW
+                id: 'duration',
+                title: 'Persistence',
+                desc: 'Increase weapon effect durations by 15%.',
+                apply: (p) => { p.durationMultiplier *= 1.15; }
+            },
+            { // NEW
+                id: 'gold_gain',
+                title: 'Midas Touch',
+                desc: 'Increase gold gain by 10%.',
+                apply: (p) => { p.goldMultiplier *= 1.1; }
+            },
+            { // NEW
+                id: 'armor',
+                title: 'Stone Skin',
+                desc: 'Reduce all incoming damage by 5.',
+                apply: (p) => { p.armor += 5; }
+            }
+        ];
+        
+        const weaponUpgradePool = [
+            // --- Pierce ---
+            { 
+                id: 'pierce_new', 
+                title: 'Piercing Bolt (NEW)', 
+                desc: 'Gain a powerful piercing projectile that hits multiple enemies.',
+                apply: (p) => { p.weapons.pierce.level = 1; },
+                available: (p) => p.weapons.pierce.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            { 
+                id: 'pierce_level', 
+                title: 'Enhanced Pierce (L+)', 
+                desc: 'Increase piercing hits by 1 and damage by 5.',
+                apply: (p) => { p.weapons.pierce.level++; p.weapons.pierce.damage += 5; p.weapons.pierce.pierceCount++; }, // NERF: 10 -> 5
+                available: (p) => p.weapons.pierce.level > 0 && p.weapons.pierce.level < MAX_WEAPON_LEVEL
+            },
+            { 
+                id: 'pierce_firerate', 
+                title: 'Pierce Accelerator (L+)', 
+                desc: 'Increase Piercing Bolt fire rate by 10%.',
+                apply: (p) => { p.weapons.pierce.level++; p.weapons.pierce.fireRate *= 0.9; }, // NERF: 0.8 -> 0.9
+                available: (p) => p.weapons.pierce.level > 0 && p.weapons.pierce.level < MAX_WEAPON_LEVEL 
+            },
+            // --- AOE ---
+            { 
+                id: 'aoe_new', 
+                title: 'A.O.E. Charge (NEW)', 
+                desc: 'Gain a slow projectile that explodes on impact.',
+                apply: (p) => { p.weapons.aoe.level = 1; },
+                available: (p) => p.weapons.aoe.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            { 
+                id: 'aoe_level', 
+                title: 'Wider Blast Radius (L+)', 
+                desc: 'Increase AOE blast radius by 8 and damage by 5.',
+                apply: (p) => { p.weapons.aoe.level++; p.weapons.aoe.radius += 8; p.weapons.aoe.damage += 5; }, // NERF: 15->8, 10->5
+                available: (p) => p.weapons.aoe.level > 0 && p.weapons.aoe.level < MAX_WEAPON_LEVEL
+            },
+            { 
+                id: 'aoe_firerate', 
+                title: 'AOE Recycler (L+)', 
+                desc: 'Increase AOE Charge fire rate by 8%.',
+                apply: (p) => { p.weapons.aoe.level++; p.weapons.aoe.fireRate *= 0.92; }, // NERF: 0.85 -> 0.92
+                available: (p) => p.weapons.aoe.level > 0 && p.weapons.aoe.level < MAX_WEAPON_LEVEL
+            },
+            // --- Boomerang ---
+            {
+                id: 'boomerang_new',
+                title: 'Boomerang Blade (NEW)',
+                desc: 'Throw a boomerang that returns, hitting enemies twice.',
+                apply: (p) => { p.weapons.boomerang.level = 1; },
+                available: (p) => p.weapons.boomerang.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'boomerang_damage',
+                title: 'Sharpened Edge (L+)',
+                desc: 'Increase Boomerang damage by 4.',
+                apply: (p) => { p.weapons.boomerang.level++; p.weapons.boomerang.damage += 4; }, // NERF: 8 -> 4
+                available: (p) => p.weapons.boomerang.level > 0 && p.weapons.boomerang.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'boomerang_speed',
+                title: 'Quick Return (L+)',
+                desc: 'Boomerang fires 12% faster.',
+                apply: (p) => { p.weapons.boomerang.level++; p.weapons.boomerang.fireRate *= 0.88; }, // NERF: 0.75 -> 0.88
+                available: (p) => p.weapons.boomerang.level > 0 && p.weapons.boomerang.level < MAX_WEAPON_LEVEL
+            },
+            // --- Laser ---
+            {
+                id: 'laser_new',
+                title: 'Laser Beam (NEW)',
+                desc: 'Fire a continuous laser beam at enemies.',
+                apply: (p) => { p.weapons.laser.level = 1; },
+                available: (p) => p.weapons.laser.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'laser_damage',
+                title: 'Amplified Beam (L+)',
+                desc: 'Increase Laser damage per tick by 1.',
+                apply: (p) => { p.weapons.laser.level++; p.weapons.laser.damage += 1; }, // NERF: 2 -> 1
+                available: (p) => p.weapons.laser.level > 0 && p.weapons.laser.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'laser_duration',
+                title: 'Extended Duration (L+)',
+                desc: 'Laser beam lasts 250ms longer.',
+                apply: (p) => { p.weapons.laser.level++; p.weapons.laser.duration += 250; }, // NERF: 500 -> 250
+                available: (p) => p.weapons.laser.level > 0 && p.weapons.laser.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'laser_cooldown',
+                title: 'Laser Recycler (L+)',
+                desc: 'Laser activates 10% faster.',
+                apply: (p) => { p.weapons.laser.level++; p.weapons.laser.cooldown *= 0.9; }, // NERF: 0.8 -> 0.9
+                available: (p) => p.weapons.laser.level > 0 && p.weapons.laser.level < MAX_WEAPON_LEVEL
+            },
+            // --- Blade ---
+            {
+                id: 'blade_new',
+                title: 'Orbiting Blades (NEW)',
+                desc: 'Summon spinning blades that orbit and damage enemies.',
+                apply: (p) => { p.weapons.blade.level = 1; p.weapons.blade.count = 1; },
+                available: (p) => p.weapons.blade.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'blade_count',
+                title: 'Additional Blade (L+)',
+                desc: 'Add +1 orbiting blade.',
+                apply: (p) => { p.weapons.blade.level++; p.weapons.blade.count++; },
+                available: (p) => p.weapons.blade.level > 0 && p.weapons.blade.level < MAX_WEAPON_LEVEL && p.weapons.blade.count < 6
+            },
+            {
+                id: 'blade_damage',
+                title: 'Razor Sharp (L+)',
+                desc: 'Increase Blade damage by 5.',
+                apply: (p) => { p.weapons.blade.level++; p.weapons.blade.damage += 5; }, // NERF: 10 -> 5
+                available: (p) => p.weapons.blade.level > 0 && p.weapons.blade.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'blade_speed',
+                title: 'Blade Velocity (L+)',
+                desc: 'Blades spin 15% faster.',
+                apply: (p) => { p.weapons.blade.level++; p.weapons.blade.speed *= 1.15; }, // NERF: 1.3 -> 1.15
+                available: (p) => p.weapons.blade.level > 0 && p.weapons.blade.level < MAX_WEAPON_LEVEL
+            },
+            // --- Missile ---
+            {
+                id: 'missile_new',
+                title: 'Homing Missiles (NEW)',
+                desc: 'Fire seeking missiles that explode on impact.',
+                apply: (p) => { p.weapons.missile.level = 1; },
+                available: (p) => p.weapons.missile.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'missile_damage',
+                title: 'Warhead Upgrade (L+)',
+                desc: 'Increase Missile damage by 5 and explosion by 3.',
+                apply: (p) => { p.weapons.missile.level++; p.weapons.missile.damage += 5; p.weapons.missile.radius += 3; }, // NERF: 10->5, 5->3
+                available: (p) => p.weapons.missile.level > 0 && p.weapons.missile.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'missile_speed',
+                title: 'Rapid Launch (L+)',
+                desc: 'Fire missiles 10% faster.',
+                apply: (p) => { p.weapons.missile.level++; p.weapons.missile.fireRate *= 0.9; }, // NERF: 0.8 -> 0.9
+                available: (p) => p.weapons.missile.level > 0 && p.weapons.missile.level < MAX_WEAPON_LEVEL
+            },
+            // --- Lightning ---
+            {
+                id: 'lightning_new',
+                title: 'Lightning Chain (NEW)',
+                desc: 'Strike enemies with lightning that chains to nearby foes.',
+                apply: (p) => { p.weapons.lightning.level = 1; },
+                available: (p) => p.weapons.lightning.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'lightning_chains',
+                title: 'Extended Chain (L+)',
+                desc: 'Lightning chains to +1 additional enemy.',
+                apply: (p) => { p.weapons.lightning.level++; p.weapons.lightning.chainCount += 1; }, // NERF: 2 -> 1
+                available: (p) => p.weapons.lightning.level > 0 && p.weapons.lightning.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'lightning_damage',
+                title: 'High Voltage (L+)',
+                desc: 'Increase Lightning damage by 5.',
+                apply: (p) => { p.weapons.lightning.level++; p.weapons.lightning.damage += 5; }, // NERF: 10 -> 5
+                available: (p) => p.weapons.lightning.level > 0 && p.weapons.lightning.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'lightning_speed',
+                title: 'Storm Frequency (L+)',
+                desc: 'Lightning strikes 10% faster.',
+                apply: (p) => { p.weapons.lightning.level++; p.weapons.lightning.fireRate *= 0.9; }, // NERF: 0.8 -> 0.9
+                available: (p) => p.weapons.lightning.level > 0 && p.weapons.lightning.level < MAX_WEAPON_LEVEL
+            },
+            // --- Poison ---
+            {
+                id: 'poison_new',
+                title: 'Poison Cloud (NEW)',
+                desc: 'Create toxic clouds that damage enemies over time.',
+                apply: (p) => { p.weapons.poison.level = 1; },
+                available: (p) => p.weapons.poison.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'poison_damage',
+                title: 'Virulent Toxin (L+)',
+                desc: 'Increase Poison damage by 2 per second.',
+                apply: (p) => { p.weapons.poison.level++; p.weapons.poison.damage += 2; }, // NERF: 3 -> 2
+                available: (p) => p.weapons.poison.level > 0 && p.weapons.poison.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'poison_speed',
+                title: 'Rapid Deployment (L+)',
+                desc: 'Deploy poison clouds 15% faster.',
+                apply: (p) => { p.weapons.poison.level++; p.weapons.poison.fireRate *= 0.85; }, // NERF: 0.7 -> 0.85
+                available: (p) => p.weapons.poison.level > 0 && p.weapons.poison.level < MAX_WEAPON_LEVEL
+            },
+            // --- Shield (NEW) ---
+            {
+                id: 'shield_new',
+                title: 'Orbiting Shield (NEW)',
+                desc: 'Gain an orbiting shield that damages enemies.',
+                apply: (p) => { p.weapons.shield.level = 1; p.weapons.shield.count = 1; },
+                available: (p) => p.weapons.shield.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'shield_count',
+                title: 'Additional Shield (L+)',
+                desc: 'Add +1 orbiting shield.',
+                apply: (p) => { p.weapons.shield.level++; p.weapons.shield.count++; },
+                available: (p) => p.weapons.shield.level > 0 && p.weapons.shield.level < MAX_WEAPON_LEVEL && p.weapons.shield.count < 8
+            },
+            {
+                id: 'shield_damage',
+                title: 'Shield Spikes (L+)',
+                desc: 'Increase shield collision damage by 5.',
+                apply: (p) => { p.weapons.shield.level++; p.weapons.shield.damage += 5; }, // NERF: 10 -> 5
+                available: (p) => p.weapons.shield.level > 0 && p.weapons.shield.level < MAX_WEAPON_LEVEL
+            },
+            
+            // --- NEW v3 Weapon Upgrades ---
+            // Ricochet
+            {
+                id: 'ricochet_new',
+                title: 'Ricochet Shot (NEW)',
+                desc: 'Fires a projectile that bounces off walls.',
+                apply: (p) => { p.weapons.ricochet.level = 1; },
+                available: (p) => p.weapons.ricochet.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'ricochet_bounces',
+                title: 'Extra Bounce (L+)',
+                desc: 'Increase bounces by 1.',
+                apply: (p) => { p.weapons.ricochet.level++; p.weapons.ricochet.bounces += 1; }, // NERF: 2 -> 1
+                available: (p) => p.weapons.ricochet.level > 0 && p.weapons.ricochet.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'ricochet_damage',
+                title: 'High Caliber (L+)',
+                desc: 'Increase Ricochet damage by 5.',
+                apply: (p) => { p.weapons.ricochet.level++; p.weapons.ricochet.damage += 5; }, // NERF: 10 -> 5
+                available: (p) => p.weapons.ricochet.level > 0 && p.weapons.ricochet.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'ricochet_count',
+                title: 'Multi-Bounce (L+)',
+                desc: 'Fire +1 ricochet projectile.',
+                apply: (p) => { p.weapons.ricochet.level++; p.weapons.ricochet.projectileCount++; },
+                available: (p) => p.weapons.ricochet.level > 0 && p.weapons.ricochet.level < MAX_WEAPON_LEVEL
+            },
+            // Gravity Well
+            {
+                id: 'gravity_new',
+                title: 'Gravity Well (NEW)',
+                desc: 'Fires an orb that pulls enemies in, then explodes.',
+                apply: (p) => { p.weapons.gravity.level = 1; },
+                available: (p) => p.weapons.gravity.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'gravity_radius',
+                title: 'Wider Singularity (L+)',
+                desc: 'Increase pull radius by 10%.',
+                apply: (p) => { p.weapons.gravity.level++; p.weapons.gravity.radius *= 1.1; }, // NERF: 1.2 -> 1.1
+                available: (p) => p.weapons.gravity.level > 0 && p.weapons.gravity.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'gravity_damage',
+                title: 'Collapse Damage (L+)',
+                desc: 'Increase explosion damage by 10.',
+                apply: (p) => { p.weapons.gravity.level++; p.weapons.gravity.damage += 10; }, // NERF: 20 -> 10
+                available: (p) => p.weapons.gravity.level > 0 && p.weapons.gravity.level < MAX_WEAPON_LEVEL
+            },
+            // Frost Nova
+            {
+                id: 'nova_new',
+                title: 'Frost Nova (NEW)',
+                desc: 'Periodically release a wave that slows enemies.',
+                apply: (p) => { p.weapons.nova.level = 1; },
+                available: (p) => p.weapons.nova.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'nova_radius',
+                title: 'Wider Chill (L+)',
+                desc: 'Increase nova radius by 15%.',
+                apply: (p) => { p.weapons.nova.level++; p.weapons.nova.radius *= 1.15; }, // NERF: 1.25 -> 1.15
+                available: (p) => p.weapons.nova.level > 0 && p.weapons.nova.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'nova_damage',
+                title: 'Deep Freeze (L+)',
+                desc: 'Increase nova damage by 5 and slow by 5%.',
+                apply: (p) => { p.weapons.nova.level++; p.weapons.nova.damage += 5; p.weapons.nova.slowAmount += 0.05; }, // NERF: 10->5, 0.1->0.05
+                available: (p) => p.weapons.nova.level > 0 && p.weapons.nova.level < MAX_WEAPON_LEVEL
+            },
+            // Spike Trail
+            {
+                id: 'spike_new',
+                title: 'Spike Trail (NEW)',
+                desc: 'Leave a trail of damaging spikes as you move.',
+                apply: (p) => { p.weapons.spike.level = 1; },
+                available: (p) => p.weapons.spike.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'spike_damage',
+                title: 'Sharper Spikes (L+)',
+                desc: 'Increase spike damage by 3.',
+                apply: (p) => { p.weapons.spike.level++; p.weapons.spike.damage += 3; }, // NERF: 5 -> 3
+                available: (p) => p.weapons.spike.level > 0 && p.weapons.spike.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'spike_duration',
+                title: 'Lingering Spikes (L+)',
+                desc: 'Spikes last 1 second longer.',
+                apply: (p) => { p.weapons.spike.level++; p.weapons.spike.duration += 1000; }, // NERF: 2000 -> 1000
+                available: (p) => p.weapons.spike.level > 0 && p.weapons.spike.level < MAX_WEAPON_LEVEL
+            },
+            // Sentry Turret
+            {
+                id: 'turret_new',
+                title: 'Sentry Turret (NEW)',
+                desc: 'Deploy a stationary turret that fires at enemies.',
+                apply: (p) => { p.weapons.turret.level = 1; p.weapons.turret.count = 1; },
+                available: (p) => p.weapons.turret.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'turret_damage',
+                title: 'Sentry Damage (L+)',
+                desc: 'Increase turret damage by 2.',
+                apply: (p) => { p.weapons.turret.level++; p.weapons.turret.damage += 2; }, // NERF: 3 -> 2
+                available: (p) => p.weapons.turret.level > 0 && p.weapons.turret.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'turret_duration',
+                title: 'Extended Deployment (L+)',
+                desc: 'Turrets last 2.5 seconds longer.',
+                apply: (p) => { p.weapons.turret.level++; p.weapons.turret.duration += 2500; }, // NERF: 5000 -> 2500
+                available: (p) => p.weapons.turret.level > 0 && p.weapons.turret.level < MAX_WEAPON_LEVEL
+            },
+             {
+                id: 'turret_count',
+                title: 'Deploy +1 Turret (L+)',
+                desc: 'Deploy an additional turret.',
+                apply: (p) => { p.weapons.turret.level++; p.weapons.turret.count++; },
+                available: (p) => p.weapons.turret.level > 0 && p.weapons.turret.level < MAX_WEAPON_LEVEL && p.weapons.turret.count < 3
+            },
+            // Blood Reaper (Scythe)
+            {
+                id: 'scythe_new',
+                title: 'Blood Reaper (NEW)',
+                desc: 'Summon a large scythe that swings at enemies.',
+                apply: (p) => { p.weapons.scythe.level = 1; p.weapons.scythe.count = 1; }, // FIX: Added count = 1
+                available: (p) => p.weapons.scythe.level === 0 && getActiveWeaponCount() < MAX_WEAPONS
+            },
+            {
+                id: 'scythe_damage',
+                title: 'Sharpened Scythe (L+)',
+                desc: 'Increase scythe damage by 8.',
+                apply: (p) => { p.weapons.scythe.level++; p.weapons.scythe.damage += 8; }, // NERF: 15 -> 8
+                available: (p) => p.weapons.scythe.level > 0 && p.weapons.scythe.level < MAX_WEAPON_LEVEL
+            },
+            {
+                id: 'scythe_speed',
+                title: 'Faster Swing (L+)',
+                desc: 'Scythe swings 10% faster.',
+                apply: (p) => { p.weapons.scythe.level++; p.weapons.scythe.fireRate *= 0.9; }, // NERF: 0.8 -> 0.9
+                available: (p) => p.weapons.scythe.level > 0 && p.weapons.scythe.level < MAX_WEAPON_LEVEL
+            },
+            // FIX: Removed duplicate scythe_speed
+            {
+                id: 'scythe_count',
+                title: 'Dual Scythes (L+)',
+                desc: 'Summon a second scythe.',
+                apply: (p) => { p.weapons.scythe.level++; p.weapons.scythe.count++; },
+                available: (p) => p.weapons.scythe.level > 0 && p.weapons.scythe.level < MAX_WEAPON_LEVEL && p.weapons.scythe.count < 2
+            }
+        ];
+        
+        // --- NEW: Reroll Functions ---
+        function rerollLevelUp() {
+            if (player.rerolls > 0) {
+                player.rerolls--;
+                showLevelUpModal(); // Re-call function to get new options
+            }
+        }
+        
+        function rerollArtifacts() {
+            const rerollCost = 50;
+            if (player.gold >= rerollCost) {
+                player.gold -= rerollCost;
+                showArtifactModal(); // Re-call function to get new options
+            }
+        }
+        // --- End Reroll Functions ---
+        
+        // --- NEW: Artifact Modal Function ---
+        function showArtifactModal() { // No artifact param
+            pauseGame();
+            
+            // --- NEW: Gold Cost Logic ---
+            const artifactCostTiers = [150, 500, 1000, 2000, 4000]; // NEW PRICES
+            const cost = artifactCostTiers[player.artifacts.length] || 4000; // NEW PRICES
+            const hasEnoughGold = player.gold >= cost;
+            
+            // --- NEW: Pick 3 Artifacts ---
+            const availableArtifacts = artifactList.filter(a => !player.hasArtifact[a.id]);
+            const choices = [];
+            const poolCopy = [...availableArtifacts];
+        
+            for (let i = 0; i < 3; i++) {
+                if (poolCopy.length === 0) break;
+                const randIndex = Math.floor(Math.random() * poolCopy.length);
+                choices.push(poolCopy.splice(randIndex, 1)[0]);
+            }
+            
+            if (choices.length === 0) { // No artifacts left
+                player.gold += 500; // Give gold instead
+                unPauseGame();
+                return;
+            }
+            // --- End Pick 3 ---
+
+            // --- NEW: Update Modal HTML ---
+            artifactCardContent.innerHTML = ''; // Clear old content
+            
+            choices.forEach(artifact => {
+                const rarityClass = getRarityClass(artifact.rarity);
+                const borderClass = getRarityBorder(artifact.rarity);
+                
+                const card = document.createElement('div');
+                card.className = `artifact-card-choice ${borderClass}`;
+                card.innerHTML = `
+                    <div class="artifact-icon">${artifact.icon}</div>
+                    <div class="artifact-title ${rarityClass}">${artifact.name}</div>
+                    <div class="artifact-rarity ${rarityClass}">${artifact.rarity}</div>
+                    <p class="artifact-desc">${artifact.desc}</p>
+                `;
+                
+                if (hasEnoughGold) {
+                    card.onclick = () => {
+                        player.gold -= cost;
+                        addArtifact(artifact);
+                        artifactModal.style.display = 'none';
+                        unPauseGame();
+                    };
+                } else {
+                    card.style.opacity = '0.5';
+                    card.style.cursor = 'not-allowed';
+                }
+                artifactCardContent.appendChild(card);
+            });
+            
+            document.getElementById('artifact-modal-title').textContent = 'Choose an Artifact'; // NEW ID
+            artifactCostText.textContent = `Cost: ${cost} Gold`; // Update cost text
+            
+            if (!hasEnoughGold) {
+                artifactCostText.textContent += ` (Not Enough! You have ${player.gold})`;
+                artifactCostText.className = 'mt-4 text-lg text-red-500 font-bold';
+            } else {
+                artifactCostText.className = 'mt-4 text-lg text-yellow-300 font-bold';
+            }
+            
+            // Handle Reroll button
+            const rerollCost = 50;
+            artifactRerollButton.textContent = `Reroll (${rerollCost} Gold)`;
+            artifactRerollButton.disabled = player.gold < rerollCost;
+            
+            artifactDeclineButton.style.display = 'inline-block'; // Show decline button
+            
+            artifactModal.style.display = 'block';
+        }
+        // --- End Artifact Modal Function ---
+        
+        // --- NEW: Stat Info Modal Function ---
+        function showStatInfoModal() {
+            pauseGame();
+            
+            let damageBonus = 0;
+            if (player.hasArtifact['glass_cannon']) damageBonus += 40;
+            if (player.hasArtifact['ironclad']) damageBonus -= 10;
+            if (player.hasArtifact['overclock_module']) damageBonus -= 10;
+            
+            let playerStatsHtml = `
+                <h3>Player Stats</h3>
+                <div class="stat-grid">
+                    <div class="stat-item"><span class="stat-name">HP</span><span class="stat-value">${Math.ceil(player.hp)} / ${Math.floor(player.maxHp)}</span></div>
+                    <div class="stat-item"><span class="stat-name">Armor</span><span class="stat-value">${player.armor}</span></div>
+                    <div class="stat-item"><span class="stat-name">HP Regen</span><span class="stat-value">${player.hpRegen.toFixed(1)}/s</span></div>
+                    <div class="stat-item"><span class="stat-name">Lifesteal</span><span class="stat-value">${(player.lifeSteal * 100).toFixed(0)}%</span></div>
+                    <div class="stat-item"><span class="stat-name">Move Speed</span><span class="stat-value">${player.speed.toFixed(1)}</span></div>
+                    <div class="stat-item"><span class="stat-name">Dodge</span><span class="stat-value">${(player.dodgeChance * 100).toFixed(0)}%</span></div>
+                    <div class="stat-item"><span class="stat-name">Damage Bonus</span><span class="stat-value">${damageBonus > 0 ? '+' : ''}${damageBonus}%</span></div>
+                    <div class="stat-item"><span class="stat-name">Crit Chance</span><span class="stat-value">${(player.critChance * 100).toFixed(0)}%</span></div>
+                    <div class="stat-item"><span class="stat-name">Crit Damage</span><span class="stat-value">${(player.critMultiplier * 100).toFixed(0)}%</span></div>
+                    <div class="stat-item"><span class="stat-name">Cooldown</span><span class="stat-value">${((1 - player.cooldownMultiplier) * 100).toFixed(0)}%</span></div>
+                    <div class="stat-item"><span class="stat-name">Area Size</span><span class="stat-value">${(player.aoeMultiplier * 100).toFixed(0)}%</span></div>
+                    <div class="stat-item"><span class="stat-name">Duration</span><span class="stat-value">${(player.durationMultiplier * 100).toFixed(0)}%</span></div>
+                    <div class="stat-item"><span class="stat-name">Pickup Range</span><span class="stat-value">${(player.magnetRange).toFixed(0)}</span></div>
+                    <div class="stat-item"><span class="stat-name">Gold Gain</span><span class="stat-value">${(player.goldMultiplier * 100).toFixed(0)}%</span></div>
+                </div>
+            `;
+            
+            let weaponStatsHtml = `<h3>Weapon Stats</h3>`;
+            let hasWeapons = false;
+            
+            for (const key in player.weapons) {
+                const weapon = player.weapons[key];
+                if (weapon.level === 0) continue;
+                hasWeapons = true;
+                
+                const cooldown = ((weapon.fireRate || weapon.cooldown || 0) * player.cooldownMultiplier / 1000).toFixed(2);
+                
+                weaponStatsHtml += `<div class="weapon-stat-item">`;
+                weaponStatsHtml += `<div class="weapon-title">${key.charAt(0).toUpperCase() + key.slice(1)} (Lvl ${weapon.level})</div>`;
+                weaponStatsHtml += `<div class="weapon-stats-grid">`;
+                weaponStatsHtml += `<div><span class="stat-name">Damage:</span> <span class="stat-value">${weapon.damage}</span></div>`;
+                if (cooldown > 0) weaponStatsHtml += `<div><span class="stat-name">Cooldown:</span> <span class="stat-value">${cooldown}s</span></div>`;
+                if (weapon.projectileCount) weaponStatsHtml += `<div><span class="stat-name">Count:</span> <span class="stat-value">${weapon.projectileCount + player.bonusProjectiles}</span></div>`;
+                if (weapon.count) weaponStatsHtml += `<div><span class="stat-name">Count:</span> <span class="stat-value">${weapon.count}</span></div>`;
+                if (weapon.pierceCount) weaponStatsHtml += `<div><span class="stat-name">Pierce:</span> <span class="stat-value">${weapon.pierceCount}</span></div>`;
+                if (weapon.radius) weaponStatsHtml += `<div><span class="stat-name">Radius:</span> <span class="stat-value">${(weapon.radius * player.aoeMultiplier).toFixed(0)}</span></div>`;
+                if (weapon.bounces) weaponStatsHtml += `<div><span class="stat-name">Bounces:</span> <span class="stat-value">${weapon.bounces}</span></div>`;
+                if (weapon.chainCount) weaponStatsHtml += `<div><span class="stat-name">Chains:</span> <span class="stat-value">${weapon.chainCount}</span></div>`;
+                if (weapon.duration) weaponStatsHtml += `<div><span class="stat-name">Duration:</span> <span class="stat-value">${(weapon.duration * player.durationMultiplier / 1000).toFixed(1)}s</span></div>`;
+                
+                weaponStatsHtml += `</div></div>`;
+            }
+            
+            if (!hasWeapons) {
+                weaponStatsHtml += `<p>No weapons active.</p>`;
+            }
+            
+            statInfoContent.innerHTML = playerStatsHtml + weaponStatsHtml;
+            statInfoModal.style.display = 'block';
+        }
+        // --- End Stat Info Modal Function ---
+
+        function showLevelUpModal() {
+            pauseGame();
+            
+            powerUpOptionsContainer.innerHTML = '';
+            
+            const availablePowerUps = powerUpPool.filter(u => !u.available || u.available(player));
+            
+            const choices = [];
+            const poolCopy = [...availablePowerUps];
+            
+            for (let i = 0; i < 3; i++) {
+                if (poolCopy.length === 0) break;
+                const randIndex = Math.floor(Math.random() * poolCopy.length);
+                choices.push(poolCopy.splice(randIndex, 1)[0]);
+            }
+
+            for (const choice of choices) {
+                const button = document.createElement('button');
+                button.className = 'modal-button powerup-button';
+                button.innerHTML = `
+                    <div class="powerup-title">${choice.title}</div>
+                    <div class="powerup-desc">${choice.desc}</div>
+                `;
+                button.onclick = () => selectPowerUp(choice);
+                powerUpOptionsContainer.appendChild(button);
+            }
+            
+            // NEW: Reroll Button
+            levelUpRerollButton.textContent = `Reroll (${player.rerolls})`;
+            levelUpRerollButton.disabled = player.rerolls <= 0;
+            
+            document.querySelector('#levelUpModal h2').textContent = 'Level Up!';
+            document.querySelector('#levelUpModal p').textContent = 'Choose a power-up:';
+
+            levelUpModal.style.display = 'block';
+        }
+
+        function showWeaponUpgradeModal() {
+            pauseGame();
+            
+            powerUpOptionsContainer.innerHTML = '';
+            
+            const availableUpgrades = weaponUpgradePool.filter(u => u.available(player));
+            
+            const choices = [];
+            const poolCopy = [...availableUpgrades];
+            
+            if (poolCopy.length === 0) {
+                choices.push({
+                    title: 'Large XP Pouch',
+                    desc: 'Gain a large amount of XP.',
+                    apply: (p) => { gainXP(p.xpToNextLevel * 0.5); }
+                });
+                choices.push({
+                    title: 'Full Heal',
+                    desc: 'Restore all HP.',
+                    apply: (p) => { p.hp = p.maxHp; }
+                });
+                choices.push({
+                    title: 'Gold',
+                    desc: 'Gain 100 Gold.',
+                    apply: (p) => { p.gold += 100; }
+                });
+
+            } else {
+                for (let i = 0; i < 3; i++) {
+                    if (poolCopy.length === 0) break;
+                    const randIndex = Math.floor(Math.random() * poolCopy.length);
+                    choices.push(poolCopy.splice(randIndex, 1)[0]);
+                }
+            }
+            
+            for (const choice of choices) {
+                const button = document.createElement('button');
+                button.className = 'modal-button powerup-button';
+                button.innerHTML = `
+                    <div class="powerup-title">${choice.title}</div>
+                    <div class="powerup-desc">${choice.desc}</div>
+                `;
+                button.onclick = () => selectPowerUp(choice);
+                powerUpOptionsContainer.appendChild(button);
+            }
+            
+            // NEW: Reroll Button (also for weapon drops)
+            levelUpRerollButton.textContent = `Reroll (${player.rerolls})`;
+            levelUpRerollButton.disabled = player.rerolls <= 0;
+            
+            document.querySelector('#levelUpModal h2').textContent = 'Weapon Drop!';
+            document.querySelector('#levelUpModal p').textContent = 'A powerful upgrade was found:';
+            levelUpModal.style.display = 'block';
+        }
+
+        function selectPowerUp(powerUp) {
+            powerUp.apply(player);
+            levelUpModal.style.display = 'none';
+            unPauseGame();
+        }
+        
+        function showGameOver() {
+            pauseGame(); // NEW: Explicitly pause
+            game.gameOver = true; // Set flag
+            document.getElementById('finalTime').textContent = formatTime(game.timer);
+            gameOverScreen.style.display = 'block';
+        }
+
+        function draw(now) { // FIX: Added 'now'
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (const cloud of poisonClouds) {
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.3)';
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#10B981';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const pulse = Math.sin(now / 200) * 5; // FIX: Use 'now'
+                ctx.arc(cloud.x, cloud.y, cloud.radius + pulse, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            for (const item of xpOrbs) {
+                if (item.type === 'WEAPON') {
+                    ctx.save();
+                    ctx.translate(item.x, item.y);
+                    ctx.rotate(now / 3000 * Math.PI); // FIX: Use 'now'
+                    drawPolygon(0, 0, item.radius, 4, item.color);
+                    ctx.restore();
+                } else if (item.type === 'ARTIFACT') { // NEW
+                    ctx.save();
+                    ctx.translate(item.x, item.y);
+                    ctx.rotate(now / 1000 * Math.PI); // FIX: Use 'now'
+                    // Glowing golden octagon
+                    ctx.fillStyle = '#F59E0B'; // Amber
+                    drawPolygon(0, 0, item.radius * 1.2, 8, 'rgba(245, 158, 11, 0.5)');
+                    drawPolygon(0, 0, item.radius, 8, '#F59E0B');
+                    ctx.restore();
+                } else if (item.type === 'GOLD') { // NEW
+                    ctx.fillStyle = item.color;
+                    ctx.beginPath();
+                    ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // --- Spikes ---
+            for (const spike of spikes) {
+                ctx.fillStyle = '#94A3B8';
+                ctx.beginPath();
+                ctx.moveTo(spike.x, spike.y - spike.radius);
+                ctx.lineTo(spike.x + spike.radius, spike.y + spike.radius);
+                ctx.lineTo(spike.x - spike.radius, spike.y + spike.radius);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // --- Turrets ---
+            for (const t of turrets) {
+                ctx.fillStyle = t.color;
+                ctx.fillRect(t.x - t.radius, t.y - t.radius, t.radius * 2, t.radius * 2);
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(t.x - 2, t.y - 2, 4, 4);
+            }
+
+            // --- Gravity Wells ---
+            for (const well of gravityWells) {
+                ctx.fillStyle = well.color;
+                ctx.beginPath();
+                ctx.arc(well.x, well.y, well.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (well.active) {
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    const pulse = well.pullRadius * (Math.sin(Date.now() / 200) * 0.1 + 0.9);
+                    ctx.arc(well.x, well.y, pulse, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            // --- Projectiles ---
+            for (const p of projectiles) {
+                ctx.fillStyle = p.color;
+
+                if (p.boomerang) {
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(Date.now() / 100);
+                    const r = p.radius * player.aoeMultiplier;
+                    ctx.fillRect(-r, -r/2, r * 2, r);
+                    ctx.restore();
+                } else if (p.homing) {
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    const angle = Math.atan2(p.vy, p.vx);
+                    ctx.rotate(angle);
+                    const r = p.radius * player.aoeMultiplier;
+                    ctx.beginPath();
+                    ctx.moveTo(r * 1.5, 0);
+                    ctx.lineTo(-r, r);
+                    ctx.lineTo(-r, -r);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                } else {
+                    ctx.beginPath();
+                    let r = p.radius;
+                    if (!p.gravityWell) {
+                        r *= player.aoeMultiplier;
+                    }
+                    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // --- Enemies ---
+            for (const e of enemies) {
+                if (e.type === 'teleporter') {
+                    ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 200) * 0.3;
+                }
+
+                // Status Effects
+                if (e.poisonTimer > 0) {
+                    drawPolygon(e.x, e.y, e.radius, e.sides, '#22C55E');
+                } else if (e.slowTimer > 0) {
+                    drawPolygon(e.x, e.y, e.radius, e.sides, '#5EEAD4');
+                } else {
+                    drawPolygon(e.x, e.y, e.radius, e.sides, e.originalColor);
+                }
+
+                ctx.globalAlpha = 1.0;
+
+                // Boss Outline
+                if (e.type === 'boss') {
+                    ctx.strokeStyle = '#DC2626';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(e.x, e.y, e.radius + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // HP Bar
+                if (e.hp < e.maxHp) {
+                    ctx.fillStyle = '#4B5563';
+                    ctx.fillRect(e.x - e.radius, e.y - e.radius - 8, e.radius * 2, 5);
+                    ctx.fillStyle = '#10B981';
+                    ctx.fillRect(
+                        e.x - e.radius,
+                        e.y - e.radius - 8,
+                        (e.radius * 2) * (e.hp / e.maxHp),
+                        5
+                    );
+                }
+            }
+            // --- DRAW LASER ---
+const laser = player.weapons.laser;
+
+if (laser.active && laser.target) {
+    let angle = Math.atan2(
+        laser.target.y - player.y,
+        laser.target.x - player.x
+    );
+
+    // laser ends at max range, not INFINITE
+    const endX = player.x + Math.cos(angle) * laser.range;
+    const endY = player.y + Math.sin(angle) * laser.range;
+
+    ctx.strokeStyle = '#F87171';
+    ctx.lineWidth = (3 + (laser.level * 1.5)) * player.aoeMultiplier;
+
+    ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 50) * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+}
+
+            // --- Lightning ---
+            for (const bolt of lightningBolts) {
+                ctx.strokeStyle = '#8B5CF6';
+                ctx.lineWidth = 2 + Math.random() * 2;
+                ctx.globalAlpha = 0.5 + Math.random() * 0.3;
+
+                ctx.beginPath();
+                ctx.moveTo(bolt.chain[0].x, bolt.chain[0].y);
+                for (let i = 1; i < bolt.chain.length; i++) {
+                    ctx.lineTo(bolt.chain[i].x, bolt.chain[i].y);
+                }
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1.0;
+
+            // --- Nova ---
+            for (const nova of novas) {
+                ctx.strokeStyle = '#5EEAD4';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 1 - (nova.radius / nova.maxRadius);
+
+                ctx.beginPath();
+                ctx.arc(nova.x, nova.y, nova.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.globalAlpha = 1.0;
+            }
+
+            // --- Scythe ---
+            for (const scythe of scythes) {
+                const progress = (now - scythe.createdAt) / scythe.lifetime;
+                const currentAngle =
+                    scythe.startAngle +
+                    (scythe.endAngle - scythe.startAngle) * progress;
+
+                ctx.fillStyle = 'rgba(220,38,38,0.5)';
+                ctx.beginPath();
+                ctx.moveTo(scythe.x, scythe.y);
+                ctx.arc(
+                    scythe.x,
+                    scythe.y,
+                    scythe.radius,
+                    scythe.startAngle,
+                    currentAngle,
+                    scythe.endAngle < scythe.startAngle
+                );
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // --- Player ---
+            if (player.invincible && Math.floor(Date.now() / 100) % 2 === 0) {
+                // blink
+            } else {
+                ctx.fillStyle = player.color;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // --- Shield Orbit ---
+            if (player.weapons.shield.count > 0) {
+                for (let i = 0; i < player.weapons.shield.count; i++) {
+                    const angle =
+                        player.orbitAngle +
+                        (i * (2 * Math.PI)) / player.weapons.shield.count;
+                    const r = 40 * player.aoeMultiplier;
+
+                    const sx = player.x + Math.cos(angle) * r;
+                    const sy = player.y + Math.sin(angle) * r;
+
+                    ctx.fillStyle = '#A78BFA';
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 10 * player.aoeMultiplier, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // --- Blade Orbit ---
+            if (player.weapons.blade.level > 0) {
+                for (let i = 0; i < player.weapons.blade.count; i++) {
+                    const blade = blades[i];
+                    if (!blade) continue;
+
+                    const r = 60 * player.aoeMultiplier;
+                    const bx = player.x + Math.cos(blade.angle) * r;
+                    const by = player.y + Math.sin(blade.angle) * r;
+
+                    ctx.save();
+                    ctx.translate(bx, by);
+                    ctx.rotate(blade.angle);
+                    ctx.fillStyle = '#14B8A6';
+                    ctx.fillRect(
+                        -15 * player.aoeMultiplier,
+                        -3 * player.aoeMultiplier,
+                        30 * player.aoeMultiplier,
+                        6 * player.aoeMultiplier
+                    );
+                    ctx.restore();
+                }
+            }
+
+            drawUI();
+        }
+        function drawUI() {
+            const uiPadding = 20;
+            
+            // --- Player HP ---
+            const hpBarWidth = 200;
+            const hpBarHeight = 15;
+            ctx.fillStyle = '#4B5563';
+            ctx.fillRect(uiPadding, uiPadding, hpBarWidth, hpBarHeight);
+
+            const hpWidth = hpBarWidth * (player.hp / player.maxHp);
+            ctx.fillStyle = '#EF4444';
+            ctx.fillRect(uiPadding, uiPadding, hpWidth, hpBarHeight);
+
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Inter';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            const soulHp = (player.hasArtifact['soul_collector'] ? ` (+${player.soulCollectorKills})` : '');
+            ctx.fillText(`HP: ${Math.ceil(player.hp)} / ${Math.floor(player.maxHp)}${soulHp}`, uiPadding, uiPadding + hpBarHeight + 5);
+
+            // --- XP Bar ---
+            const xpBarWidth = 200;
+            const xpBarHeight = 15;
+            const xpBarY = uiPadding + hpBarHeight + 25;
+
+            ctx.fillStyle = '#4B5563';
+            ctx.fillRect(uiPadding, xpBarY, xpBarWidth, xpBarHeight);
+
+            const xpWidth = xpBarWidth * (player.xp / player.xpToNextLevel);
+            ctx.fillStyle = '#3B82F6';
+            ctx.fillRect(uiPadding, xpBarY, xpWidth, xpBarHeight);
+
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Inter';
+            ctx.fillText(`Level: ${player.level} (${Math.floor(player.xp)} / ${player.xpToNextLevel} XP)`,
+                uiPadding,
+                xpBarY + xpBarHeight + 5
+            );
+
+            // --- Weapon UI ---
+            let weaponUIY = xpBarY + xpBarHeight + 25;
+            const weaponIconSize = 15;
+            const weaponIconGap = 35;
+
+            ctx.textAlign = 'left';
+            ctx.font = '11px Inter';
+            ctx.textBaseline = 'middle';
+
+            let iconX = uiPadding;
+
+            function drawWeaponIcon(weapon, color) {
+                if (weapon.level === 0) return;
+
+                if (iconX + weaponIconGap > canvas.width - 50) {
+                    iconX = uiPadding;
+                    weaponUIY += 25;
+                }
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(iconX + weaponIconSize/2, weaponUIY + weaponIconSize/2, weaponIconSize/2, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.fillText(`L${weapon.level}`, iconX + weaponIconSize + 3, weaponUIY + weaponIconSize/2);
+
+                iconX += weaponIconGap;
+            }
+
+            const activeWeapons = getActiveWeaponCount();
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Inter';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`Weapons: ${activeWeapons} / ${MAX_WEAPONS}`, uiPadding, weaponUIY);
+            weaponUIY += 20;
+
+            iconX = uiPadding;
+            ctx.font = '11px Inter';
+
+            drawWeaponIcon(player.weapons.main, '#FBBF24');
+            drawWeaponIcon(player.weapons.pierce, '#60A5FA');
+            drawWeaponIcon(player.weapons.aoe, '#EC4899');
+            drawWeaponIcon(player.weapons.boomerang, '#34D399');
+            drawWeaponIcon(player.weapons.laser, '#F87171');
+            drawWeaponIcon(player.weapons.blade, '#14B8A6');
+            drawWeaponIcon(player.weapons.missile, '#F59E0B');
+            drawWeaponIcon(player.weapons.lightning, '#8B5CF6');
+            drawWeaponIcon(player.weapons.poison, '#10B981');
+            drawWeaponIcon(player.weapons.shield, '#A78BFA');
+            drawWeaponIcon(player.weapons.ricochet, '#FDE047');
+            drawWeaponIcon(player.weapons.gravity, '#6366F1');
+            drawWeaponIcon(player.weapons.nova, '#5EEAD4');
+            drawWeaponIcon(player.weapons.spike, '#94A3B8');
+            drawWeaponIcon(player.weapons.turret, '#F59E0B');
+            drawWeaponIcon(player.weapons.scythe, '#DC2626');
+
+            // --- Game Timer & Wave ---
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(formatTime(game.timer), canvas.width / 2, uiPadding);
+
+            ctx.font = '16px Inter';
+            ctx.fillText(`Wave: ${game.wave}`, canvas.width / 2, uiPadding + 30);
+
+            // --- Artifact Counter ---
+            ctx.font = '14px Inter';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`Artifacts: ${player.artifacts.length} / ${player.maxArtifacts}`, canvas.width - uiPadding, 60);
+        }
+
+        // ✅ Start the entire game
+        initGame();
+    </script>
+</body>
+</html>
