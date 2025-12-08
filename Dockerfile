@@ -1,19 +1,11 @@
 FROM nginx:alpine
-# Install 'envsubst' which is needed to dynamically set the port
-RUN apk add --no-cache gettext
-
-# Copy the custom Nginx config file to be used as a template
-COPY nginx.conf /etc/nginx/nginx.conf.template
 
 # Copy the static content
 COPY index.html /usr/share/nginx/html/index.html
 
-# Copy and set permissions for the entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Copy the custom Nginx config file
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Set the entrypoint to the custom script
-ENTRYPOINT ["/entrypoint.sh"]
-
-# Cloud Run automatically handles the port, but this is kept for reference
+# Start Nginx using the default CMD (which is 'nginx -g daemon off;')
+# The base image already has the correct command to run Nginx in the foreground.
 EXPOSE 8080
