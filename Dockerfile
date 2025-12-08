@@ -1,6 +1,6 @@
 FROM nginx:alpine
 # Install 'envsubst' which is needed to dynamically set the port
-RUN apk add --no-cache gettext-base
+RUN apk add --no-cache gettext
 
 # Copy the custom Nginx config file to be used as a template
 COPY nginx.conf /etc/nginx/nginx.conf.template
